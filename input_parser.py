@@ -1,3 +1,4 @@
+import re
 import argparse
 import logging
 
@@ -32,11 +33,11 @@ def parse():
     parser.add_argument('--to-proxy',
                         help='Git "to" proxy (with credentials if needed).')
     parser.add_argument('--repos-include',
-                        help='Repositories names patterns to include (comma separated).')
+                        help='Repositories names patterns to include (comma separated).', default='')
     parser.add_argument('--repos-exclude',
                         help='Repositories names patterns to exclude (comma separated).', default='\\.')
     parser.add_argument('--branches-include',
-                        help='Branches names patterns to include (comma separated).')
+                        help='Branches names patterns to include (comma separated).', default='')
     parser.add_argument('--branches-exclude',
                         help='Branches names patterns to exclude (comma separated).', default='\\.')
     parser.add_argument('-d', '--dry-run',
@@ -47,7 +48,7 @@ def parse():
     return args
 
 
-def print_args(args):
+def print_args(args: argparse.Namespace):
     logger.info('\n------ Input arguments ------')
     logger.info('Git "from" platform URL    : %s', args.from_url)
     logger.info('Git "from" user            : %s', args.from_user)
@@ -67,3 +68,14 @@ def print_args(args):
     logger.info('Branches exclude           : %s', args.branches_exclude)
     logger.info('Dry-run                    : %s', args.dry_run)
     logger.info('Log Level                  : %s', args.log_level)
+
+
+def reduce(items: list, includes: str, excludes: str):
+    includes_combined = "(" + ")|(".join(includes.split(',')) + ")"
+    excludes_combined = "(" + ")|(".join(excludes.split(',')) + ")"
+    new_items = []
+    for item in items:
+        if re.match(excludes_combined, item) or not re.match(includes_combined, item):
+            continue
+        new_items.append(item)
+    return new_items

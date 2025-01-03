@@ -1,0 +1,66 @@
+[
+  {
+    "name": "3310",
+    "commit": {
+      "sha": "24eac813cfc442f81d97ee5870184d6b1267d9c7",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/24eac813cfc442f81d97ee5870184d6b1267d9c7"
+    },
+    "protected": false
+  },
+  {
+    "name": "efficient-webjars",
+    "commit": {
+      "sha": "30e16ab3fea583da295e0fdf88eaf0aa980d4927",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/30e16ab3fea583da295e0fdf88eaf0aa980d4927"
+    },
+    "protected": false
+  },
+  {
+    "name": "gh-pages",
+    "commit": {
+      "sha": "193b38a561ae246301a1b3f7f8e4b854546dc8d7",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/193b38a561ae246301a1b3f7f8e4b854546dc8d7"
+    },
+    "protected": false
+  },
+  {
+    "name": "hacking/mysql",
+    "commit": {
+      "sha": "a2672fef9bac82ea5ef2e73e09d4dafda2095f18",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/a2672fef9bac82ea5ef2e73e09d4dafda2095f18"
+    },
+    "protected": false
+  },
+  {
+    "name": "main",
+    "commit": {
+      "sha": "6148ddd9671ccab86a3f0ae2dfa77d833b713ee8",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/6148ddd9671ccab86a3f0ae2dfa77d833b713ee8"
+    },
+    "protected": false
+  },
+  {
+    "name": "spring-ai",
+    "commit": {
+      "sha": "809e6f1c1cb04e112ba3ef87ebda5f99f0e4f624",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/809e6f1c1cb04e112ba3ef87ebda5f99f0e4f624"
+    },
+    "protected": false
+  },
+  {
+    "name": "springboot3",
+    "commit": {
+      "sha": "dade7fcf31248b21eb158985b250c436b2e9eb54",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/dade7fcf31248b21eb158985b250c436b2e9eb54"
+    },
+    "protected": false
+  },
+  {
+    "name": "wavefront",
+    "commit": {
+      "sha": "bf0452d6f2df564c6bb1cafecd0f6893473de3c5",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/bf0452d6f2df564c6bb1cafecd0f6893473de3c5"
+    },
+    "protected": false
+  }
+]

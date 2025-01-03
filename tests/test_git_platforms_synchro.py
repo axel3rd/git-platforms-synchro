@@ -34,11 +34,31 @@ def test_git_type_undefined(httpserver: HTTPServer):
             httpserver.url_for('/') + '".'
 
 
-def test_minimal(httpserver: HTTPServer):
+def test_same_from_to_github(httpserver: HTTPServer):
     expect_request(httpserver, 'github', '/orgs/spring-projects')
     expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic/branches')
 
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
-                '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'new-org']
+                '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    with unittest.mock.patch.object(sys, 'argv', testargs):
+        git_platforms_synchro.main()
+
+
+def test_same_from_to_gitea(httpserver: HTTPServer):
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    # Declare empty page two before next first page result, infinite loop otherwise
+    httpserver.expect_request(
+        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/repos/MyOrg/spring-petclinic/branches')
+
+    testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'Gitea', '--from-user', 'foo', '--from-password', 'bar',
+                '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with unittest.mock.patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
