@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__)
 def log_init(level: str):
     logging.basicConfig(stream=sys.stdout,
                         format='%(message)s', level=level)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    if not any(level in s for s in ['TRACE', 'DEBUG']):
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
+        logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 
 def main() -> int:

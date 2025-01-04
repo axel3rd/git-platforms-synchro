@@ -3,6 +3,7 @@ import json
 import unittest
 import git_platforms_synchro
 from pytest_httpserver import HTTPServer
+from pytest import LogCaptureFixture
 
 from github import Github
 
@@ -34,7 +35,7 @@ def test_git_type_undefined(httpserver: HTTPServer):
             httpserver.url_for('/') + '".'
 
 
-def test_same_from_to_github(httpserver: HTTPServer):
+def test_same_from_to_github(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'github', '/orgs/spring-projects')
     expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
     expect_request(httpserver, 'github',
@@ -47,8 +48,10 @@ def test_same_from_to_github(httpserver: HTTPServer):
     with unittest.mock.patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
+    assert 'Already synchronized, nothing to do.' in caplog.text
 
-def test_same_from_to_gitea(httpserver: HTTPServer):
+
+def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
@@ -62,3 +65,5 @@ def test_same_from_to_gitea(httpserver: HTTPServer):
                 '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with unittest.mock.patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
+
+    assert 'Already synchronized, nothing to do.' in caplog.text
