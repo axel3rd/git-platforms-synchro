@@ -1,15 +1,43 @@
+from abc import ABC
 from github import Github, Auth
-from gitea import Gitea, Organization, Repository
+from gitea import Gitea, Organization, Repository, NotFoundException
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
+MSG_CREATE_REPO_DESCRIPTION = 'TODO - Provide a description for this repository.'
 
 
-class GitHubClient:
+class GitClient(ABC):
+
+    def get_url(self) -> str:
+        # Should return the base URL of the platform
+        pass
+
+    def get_repos(self, org) -> list:
+        # Should return a list of repositories names
+        pass
+
+    def has_repo(self, org, repo) -> bool:
+        # Should return True if the repository exists, False otherwise
+        pass
+
+    def get_branches(self, org, repo) -> dict:
+        # Should return a dictionary with branch names as keys and commit hashes as values
+        pass
+
+    def create_repo(self, org, repo):
+        # Should create a repository in the platform
+        pass
+
+
+class GitHubClient(GitClient):
 
     def __init__(self, url, user, password):
-        self.github = Github(
-            base_url=url)
+        self.url = url
+        self.github = Github(base_url=url)
+
+    def get_url(self) -> str:
+        return self.url
 
     def get_repos(self, org) -> list:
         if org is None or len(org) == 0:
@@ -37,9 +65,12 @@ class GitHubClient:
         return branches_commits
 
 
-class GiteaClient:
+class GiteaClient(GitClient):
     def __init__(self, url, user, password):
         self.gitea = Gitea(gitea_url=url, auth=(user, password))
+
+    def get_url(self) -> str:
+        return self.url
 
     def get_repos(self, org) -> list:
         if org is None or len(org) == 0:
@@ -54,7 +85,10 @@ class GiteaClient:
             raise ValueError(MSG_EMPTY_ORG)
         if repo is None or len(repo) == 0:
             raise ValueError(MSG_EMPTY_REPO)
-        return Repository.request(self.gitea, org, repo) is not None
+        try:
+            return Repository.request(self.gitea, org, repo) is not None
+        except NotFoundException:
+            return False
 
     def get_branches(self, org, repo) -> dict:
         if org is None or len(org) == 0:
@@ -66,8 +100,12 @@ class GiteaClient:
             branches_commits[branch.name] = branch.commit["id"]
         return branches_commits
 
+    def create_repo(self, org, repo):
+        Organization.request(self.gitea, org).create_repo(
+            repoName=repo, description=MSG_CREATE_REPO_DESCRIPTION, autoInit=False)
 
-class BitbucketClient:
+
+class BitbucketClient(GitClient):
     def __init__(self, url, user, password):
         raise NotImplementedError('Not implemented yet')
 

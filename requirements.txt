@@ -2,3 +2,4 @@ atlassian-python-api
 #py-gitea
 git+https://github.com/Langenfeld/py-gitea.git
 PyGithub
+gitpython
