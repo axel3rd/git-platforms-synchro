@@ -5,7 +5,6 @@ pytest_httpserver
 
 # Repeat of the main requirements, avoiding two "pip install" commands when tests used
 atlassian-python-api
-#py-gitea
-git+https://github.com/Langenfeld/py-gitea.git
+py-gitea
 PyGithub
 gitpython
