@@ -1,7 +1,7 @@
 import sys
 import shutil
 import json
-import unittest
+from unittest.mock import patch
 import tarfile
 import git_platforms_synchro
 from pytest_httpserver import HTTPServer
@@ -26,7 +26,7 @@ def test_git_type_undefined(httpserver: HTTPServer):
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--to-url', httpserver.url_for(
         '/'), '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'new-org']
     try:
-        with unittest.mock.patch.object(sys, 'argv', testargs):
+        with patch.object(sys, 'argv', testargs):
             git_platforms_synchro.main()
             # Should have raised an error
             assert False
@@ -45,7 +45,7 @@ def test_same_from_to_github(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with unittest.mock.patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
     assert 'Already synchronized, nothing to do.' in caplog.text
@@ -63,7 +63,7 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'Gitea', '--from-user', 'foo', '--from-password', 'bar',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with unittest.mock.patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
     assert 'Already synchronized, nothing to do.' in caplog.text
@@ -93,7 +93,7 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
 
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with unittest.mock.patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
     assert 'Repository do not exist on "to" plaform, will be created as mirror.' in caplog.text
