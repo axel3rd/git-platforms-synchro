@@ -30,13 +30,14 @@ def repo_mirror(git_from: GitClient, git_to: GitClient, org_from: str, org_to: s
         url_parts = remote_origin_url.split('/')
         if repo_from_cloned.working_tree_dir is not None or url_parts[-2] != org_from or url_parts[-1].replace('.git', '') != repo:
             raise TypeError('PROBLEM, current "' + TMP_REPO_GIT_DIRECTORY +
-                            '" is not the expected repository.')
+                            '" is not the expected repository ("'+org_from + '/' + repo + '").')
     else:
-        repo_from_cloned = Repo.clone_from(
-            git_from.get_url() + '/' + org_from + '/' + repo + '.git', 'tmp-git-repo')
-
-    # TODO : Add new remote and push
-    logger.info('  TODO: add new remote and push!.')
+        repo_from_cloned = Repo.clone_from(git_from.get_url() + '/' + org_from +
+                                           '/' + repo + '.git', TMP_REPO_GIT_DIRECTORY, mirror=True)
+    # Update remote origin and push to new remote
+    repo_from_cloned.remote().set_url(
+        git_to.get_url() + '/' + org_to + '/' + repo + '.git')
+    repo_from_cloned.remote().push(mirror=True)
 
 
 def main() -> int:

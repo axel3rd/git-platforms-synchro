@@ -86,10 +86,14 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
 
+    # Mock the git push
+    # TODO : Really hard todo
+
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing directory
     shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
-                  ignore_errors=True, onerror=None)
-    # TODO Create a fake git repo bare with one commit
+                  ignore_errors=True)
+    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
+        tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY)
 
     testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
@@ -97,6 +101,3 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
         git_platforms_synchro.main()
 
     assert 'Repository do not exist on "to" plaform, will be created as mirror.' in caplog.text
-
-    # TODO verify repo pushed to Gitea correctly
-    assert False

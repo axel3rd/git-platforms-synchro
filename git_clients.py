@@ -70,7 +70,7 @@ class GiteaClient(GitClient):
         self.gitea = Gitea(gitea_url=url, auth=(user, password))
 
     def get_url(self) -> str:
-        return self.url
+        return self.gitea.url
 
     def get_repos(self, org) -> list:
         if org is None or len(org) == 0:
