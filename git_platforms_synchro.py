@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import logging
 import input_parser
 from git import Repo
@@ -20,20 +21,27 @@ def log_init(level: str):
         logging.getLogger("gitea").setLevel(logging.WARNING)
 
 
+def git_clone(url: str, org: str, repo: str, mirror: bool = False) -> Repo:
+    if os.path.exists(TMP_REPO_GIT_DIRECTORY):
+        repo_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
+        origin_url = repo_cloned.config_reader(
+        ).get_value('remote "origin"', 'url')
+        url_parts = origin_url.split('/')
+        if repo_cloned.bare == mirror and url_parts[-2] == org and url_parts[-1].replace('.git', '') == repo:
+            logging.debug('Reusing existing cloned repo %s', origin_url)
+            return repo_cloned
+        else:
+            shutil.rmtree(TMP_REPO_GIT_DIRECTORY, ignore_errors=True)
+    logging.debug('Cloning repo %s/%s/%s.git', url, org, repo)
+    repo_from_cloned = Repo.clone_from(url + '/' + org +
+                                       '/' + repo + '.git', TMP_REPO_GIT_DIRECTORY, mirror=mirror)
+    return repo_from_cloned
+
+
 def repo_mirror(git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str):
     git_to.create_repo(org_to, repo)
+    repo_from_cloned = git_clone(git_from.get_url(), org_from, repo)
 
-    if os.path.exists(TMP_REPO_GIT_DIRECTORY):
-        repo_from_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
-        remote_origin_url = repo_from_cloned.config_reader(
-        ).get_value('remote "origin"', 'url')
-        url_parts = remote_origin_url.split('/')
-        if repo_from_cloned.working_tree_dir is not None or url_parts[-2] != org_from or url_parts[-1].replace('.git', '') != repo:
-            raise TypeError('PROBLEM, current "' + TMP_REPO_GIT_DIRECTORY +
-                            '" is not the expected repository ("'+org_from + '/' + repo + '").')
-    else:
-        repo_from_cloned = Repo.clone_from(git_from.get_url() + '/' + org_from +
-                                           '/' + repo + '.git', TMP_REPO_GIT_DIRECTORY, mirror=True)
     # Update remote origin and push to new remote
     repo_from_cloned.remote().set_url(
         git_to.get_url() + '/' + org_to + '/' + repo + '.git')
