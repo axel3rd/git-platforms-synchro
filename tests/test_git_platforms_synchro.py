@@ -1,11 +1,12 @@
 import sys
 import shutil
 import json
-from unittest.mock import patch
 import tarfile
 import git_platforms_synchro
+from git import GitCommandError
+from unittest.mock import patch
 from pytest_httpserver import HTTPServer
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, fail
 
 
 def load_json(file, url_to_mock, url_replacement):
@@ -70,6 +71,8 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 
 def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    url = httpserver.url_for('')
+
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/orgs/spring-projects')
     expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
@@ -86,18 +89,21 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
 
-    # Mock the git push
-    # TODO : Really hard todo
-
-    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing directory
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
     shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
                   ignore_errors=True)
     with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY)
+    httpserver.expect_request(
+        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
-    testargs = ['prog', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
-                '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = ['prog', '--from-url', url, '--from-type', 'GitHub',
+                '--to-url', url, '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
-        git_platforms_synchro.main()
-
-    assert 'Repository do not exist on "to" plaform, will be created as mirror.' in caplog.text
+        try:
+            git_platforms_synchro.main()
+            fail('Expected GitCommandError')
+        except GitCommandError:
+            assert 'Repository do not exist on "to" plaform, will be created as mirror.' in caplog.text
+            assert 'Reusing existing cloned repo https://github.com/spring-projects/spring-petclinic.git' in caplog.text
+            assert 'The requested URL returned error: 542' in caplog.text

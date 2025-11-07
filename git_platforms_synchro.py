@@ -40,7 +40,8 @@ def git_clone(url: str, org: str, repo: str, mirror: bool = False) -> Repo:
 
 def repo_mirror(git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str):
     git_to.create_repo(org_to, repo)
-    repo_from_cloned = git_clone(git_from.get_url(), org_from, repo)
+    repo_from_cloned = git_clone(
+        git_from.get_url(), org_from, repo, mirror=True)
 
     # Update remote origin and push to new remote
     repo_from_cloned.remote().set_url(
@@ -69,7 +70,6 @@ def main() -> int:
             continue
         branches_commits_from = git_from.get_branches(args.from_org, repo)
         branches_commits_to = git_to.get_branches(args.from_org, repo)
-        # logger.debug('  Branches/commit: %s', branches_commits_from)
         for branch in input_parser.reduce(branches_commits_from.keys(), args.branches_include, args.branches_exclude):
             logger.info('  Branch: %s', branch)
             commit_from = branches_commits_from.get(branch, None)
@@ -79,7 +79,8 @@ def main() -> int:
             if commit_from == commit_to:
                 logger.info('    Already synchronized, nothing to do.')
                 continue
-            logger.info('    TODO: Sync branch commits.')
+            logger.info('    Sync branch...')
+            # TODO : implement branch sync
 
         # TODO: Manage tags !!!
 
