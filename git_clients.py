@@ -1,5 +1,5 @@
 from abc import ABC
-from github import Github, Auth
+from github import Github
 from gitea import Gitea, Organization, Repository, NotFoundException
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
