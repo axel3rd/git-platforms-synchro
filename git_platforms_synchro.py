@@ -38,15 +38,38 @@ def git_clone(url: str, org: str, repo: str, mirror: bool = False) -> Repo:
     return repo_from_cloned
 
 
-def repo_mirror(git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str):
+def repo_mirror(dry_run: bool, git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str):
+    if dry_run:
+        logger.info(
+            '  Dry-run mode, skipping repository creation and mirroring.')
+        return
     git_to.create_repo(org_to, repo)
     repo_from_cloned = git_clone(
         git_from.get_url(), org_from, repo, mirror=True)
-
-    # Update remote origin and push to new remote
     repo_from_cloned.remote().set_url(
         git_to.get_url() + '/' + org_to + '/' + repo + '.git')
     repo_from_cloned.remote().push(mirror=True)
+
+
+def repo_branch_sync(dry_run: bool, git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str, branch: str):
+    if dry_run:
+        logger.info('  Dry-run mode, skipping branch synchronization.')
+        return
+    repo_from_cloned = git_clone(git_from.get_url(), org_from, repo)
+    repo_from_cloned.git.checkout(branch)
+    repo_from_cloned.remote().set_url(
+        git_to.get_url() + '/' + org_to + '/' + repo + '.git')
+    repo_from_cloned.remote().push()
+
+
+def repo_tags_sync(dry_run: bool, git_from: GitClient, git_to: GitClient, org_from: str, org_to: str, repo: str):
+    if dry_run:
+        logger.info('  Dry-run mode, skipping tags synchronization.')
+        return
+    repo_from_cloned = git_clone(git_from.get_url(), org_from, repo)
+    repo_from_cloned.remote().set_url(
+        git_to.get_url() + '/' + org_to + '/' + repo + '.git')
+    repo_from_cloned.remote().push(tags=True)
 
 
 def main() -> int:
@@ -65,11 +88,13 @@ def main() -> int:
         logger.info('Repository: %s', repo)
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
-                '  Repository do not exist on "to" plaform, will be created as mirror.')
-            repo_mirror(git_from, git_to, args.from_org, args.to_org, repo)
+                '  Repository does not exist on "to" plaform, will be created as mirror.')
+            repo_mirror(args.dry_run, git_from, git_to,
+                        args.from_org, args.to_org, repo)
             continue
         branches_commits_from = git_from.get_branches(args.from_org, repo)
-        branches_commits_to = git_to.get_branches(args.from_org, repo)
+        branches_commits_to = git_to.get_branches(args.to_org, repo)
+        branches_updated = 0
         for branch in input_parser.reduce(branches_commits_from.keys(), args.branches_include, args.branches_exclude):
             logger.info('  Branch: %s', branch)
             commit_from = branches_commits_from.get(branch, None)
@@ -77,12 +102,16 @@ def main() -> int:
             commit_to = branches_commits_to.get(branch, None)
             logger.info('    Commit To  : %s', commit_to)
             if commit_from == commit_to:
-                logger.info('    Already synchronized, nothing to do.')
+                logger.info('    Already synchronized.')
                 continue
-            logger.info('    Sync branch...')
-            # TODO : implement branch sync
-
-        # TODO: Manage tags !!!
+            logger.info('    Synchronize branch...')
+            branches_updated += 1
+            repo_branch_sync(args.dry_run, git_from, git_to,
+                             args.from_org, args.to_org, repo, branch)
+        if branches_updated == 0:
+            logger.info('  All branches already synchronized, do tags only...')
+            repo_tags_sync(
+                args.dry_run, git_from, git_to, args.from_org, args.to_org, repo)
 
     logger.info('\nGit Platforms Synchronization finished sucessfully.')
     return 0

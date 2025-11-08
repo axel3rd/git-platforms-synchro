@@ -41,7 +41,7 @@ def parse():
     parser.add_argument('--branches-exclude',
                         help='Branches names patterns to exclude (comma separated).', default='\\.')
     parser.add_argument('-d', '--dry-run',
-                        help='Dry-run : Just analyse which branches should be synchronized, without doning it really.', default=False)
+                        help='Dry-run : Just analyse which branches should be synchronized, without doning it really.',  action='store_true')
     parser.add_argument(
         '-l', '--log-level', help='Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)', default='INFO')
     args = parser.parse_args()
