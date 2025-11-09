@@ -2,11 +2,16 @@ import sys
 import shutil
 import json
 import tarfile
+import pytest_httpserver
 import git_platforms_synchro
 from git import GitCommandError
 from unittest.mock import patch
 from pytest_httpserver import HTTPServer
 from pytest import LogCaptureFixture, fail
+
+
+def get_url_root(httpserver: HTTPServer) -> str:
+    return httpserver.url_for('/').rstrip('/')
 
 
 def load_json(file: str, url_to_mock: str, url_replacement: str):
@@ -75,8 +80,6 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 
 def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    url = httpserver.url_for('')
-
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/orgs/spring-projects')
     expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
@@ -88,10 +91,13 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos', query_string='page=1').respond_with_json([])
-    httpserver.expect_request(
+    httpserver.expect_oneshot_request(
         '/api/v1/repos/MyOrg/spring-petclinic').respond_with_data(status=404)
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
+    # Newly created repo at second call
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
+                   'http://localhost:3000', get_url_root(httpserver))
 
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
     shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
@@ -101,8 +107,8 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
-    testargs = ['prog', '--from-url', url, '--from-type', 'GitHub',
-                '--to-url', url, '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         try:
             git_platforms_synchro.main()
@@ -114,8 +120,6 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
 
 
 def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    url = httpserver.url_for('')
-
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
     shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
                   ignore_errors=True)
@@ -139,12 +143,13 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
+                   'http://localhost:3000', get_url_root(httpserver))
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
 
-    testargs = ['prog', '--from-url', url, '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
-                '--to-url', url, '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
 
     with patch.object(sys, 'argv', testargs):
         try:
@@ -157,8 +162,6 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
 
 
 def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    url = httpserver.url_for('')
-
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
     shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
                   ignore_errors=True)
@@ -182,12 +185,13 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
+                   'http://localhost:3000', get_url_root(httpserver))
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
 
-    testargs = ['prog', '--from-url', url, '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
-                '--to-url', url, '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
 
     with patch.object(sys, 'argv', testargs):
         try:

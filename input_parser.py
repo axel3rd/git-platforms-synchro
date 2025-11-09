@@ -9,7 +9,7 @@ def parse():
     parser = argparse.ArgumentParser(
         description='Git Platforms Synchronization')
     parser.add_argument('--from-url', required=True,
-                        help='Git "from" platform URL (Required)')
+                        help='Git "from" platform API URL (Required)')
     parser.add_argument('--from-user',
                         help='Git "from" user.')
     parser.add_argument('--from-password',
@@ -21,7 +21,7 @@ def parse():
     parser.add_argument('--from-proxy',
                         help='Git "from" proxy (with credentials if needed).')
     parser.add_argument('--to-url', required=True,
-                        help='Git "to" platform URL (Required)')
+                        help='Git "to" platform API URL (Required)')
     parser.add_argument('--to-user',
                         help='Git "to" user (Required).', required=True)
     parser.add_argument('--to-password',
