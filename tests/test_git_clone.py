@@ -1,8 +1,6 @@
-import sys
 import shutil
 import tarfile
 import git_platforms_synchro
-from unittest.mock import patch
 from pytest import LogCaptureFixture, fail
 from pytest_httpserver import HTTPServer
 from git import GitCommandError

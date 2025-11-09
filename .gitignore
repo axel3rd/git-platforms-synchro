@@ -1,5 +1,6 @@
 # IDE
 /.vscode/
+/.sonarlint/
 /.coverage
 
 # Byte-compiled / optimized / DLL files
@@ -7,3 +8,4 @@
 
 # Temporary or testing files
 /tmp-git-repo/
+coverage.xml

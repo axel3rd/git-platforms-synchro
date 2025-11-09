@@ -1,4 +1,4 @@
-# Decitaed test dependencies
+# Dedicated test dependencies
 pytest
 pytest-cov
 pytest_httpserver
