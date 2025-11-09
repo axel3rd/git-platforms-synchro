@@ -23,9 +23,9 @@ jobs:
           pip install -r tests/requirements.txt
       - name: Test with pytest
         run: |
-          pytest --cov=my_project --cov-report=xml --cov-branch
+          coverage run -m pytest
+          coverage xml
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
