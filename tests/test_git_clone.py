@@ -4,10 +4,7 @@ import git_platforms_synchro
 from pytest import LogCaptureFixture, fail
 from pytest_httpserver import HTTPServer
 from git import GitCommandError
-
-
-def get_url_root(httpserver: HTTPServer) -> str:
-    return httpserver.url_for('/').rstrip('/')
+from tests.test_utils import get_url_root
 
 
 def test_cloned_reuse(caplog: LogCaptureFixture):

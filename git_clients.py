@@ -1,11 +1,21 @@
 from abc import ABC
 import re
-from github import Github, Auth
+from github import Github, Auth, GithubException
 from gitea import Gitea, Organization, Repository, NotFoundException
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
 MSG_CREATE_REPO_DESCRIPTION = 'TODO - Provide a description for this repository.'
+
+
+def check_input(param: str, message: str):
+    if param is None or len(param) == 0:
+        raise ValueError(message)
+
+
+def check_inputs(org: str, repo: str = None):
+    check_input(org, MSG_EMPTY_ORG)
+    check_input(repo, MSG_EMPTY_REPO)
 
 
 class GitClient(ABC):
@@ -24,6 +34,10 @@ class GitClient(ABC):
 
     def get_branches(self, org: str, repo: str) -> dict:
         # Should return a dictionary with branch names as keys and commit hashes as values
+        pass
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        # Should return the description of the repository
         pass
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
@@ -51,42 +65,38 @@ class GitHubClient(GitClient):
         return self.url
 
     def get_repos(self, org: str) -> list:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
+        check_input(org, MSG_EMPTY_ORG)
         repos = []
         for repo in self.github.get_organization(org).get_repos():
             repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
-        return self.github.get_organization(org).get_repo(repo) is not None
+        check_inputs(org, repo)
+        try:
+            return self.github.get_organization(org).get_repo(repo) is not None
+        except GithubException as e:
+            if e.status == 404:
+                return False
+            raise e
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.github.get_organization(org).get_repo(repo).description
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         return self.github.get_organization(org).get_repo(repo).clone_url
 
     def get_branches(self, org: str, repo: str) -> dict:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         branches_commits = {}
         for branch in self.github.get_organization(org).get_repo(repo).get_branches():
             branches_commits[branch.name] = branch.commit.sha
         return branches_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         # Warning, does not work for 'user' accounts, only for 'org' accounts
         # Use github.get_user().create_repo() for that case
         self.github.get_organization(org).create_repo(
@@ -102,35 +112,29 @@ class GiteaClient(GitClient):
         return self.gitea.url
 
     def get_repos(self, org: str) -> list:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
+        check_input(org, MSG_EMPTY_ORG)
         repos = []
         for repo in Organization.request(self.gitea, org).get_repositories():
             repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         try:
             return Repository.request(self.gitea, org, repo) is not None
         except NotFoundException:
             return False
 
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return Repository.request(self.gitea, org, repo).description
+
     def get_repo_clone_url(self, org: str, repo: str) -> str:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         return Repository.request(self.gitea, org, repo).clone_url
 
     def get_branches(self, org: str, repo: str) -> dict:
-        if org is None or len(org) == 0:
-            raise ValueError(MSG_EMPTY_ORG)
-        if repo is None or len(repo) == 0:
-            raise ValueError(MSG_EMPTY_REPO)
+        check_inputs(org, repo)
         branches_commits = {}
         for branch in Repository.request(self.gitea, org, repo).get_branches():
             branches_commits[branch.name] = branch.commit["id"]
