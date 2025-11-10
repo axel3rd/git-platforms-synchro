@@ -19,6 +19,16 @@ def load_json(file: str, url_to_mock: str, url_replacement: str):
         return json.loads(f.read().replace(url_to_mock, url_replacement))
 
 
+def prepare_github_with_spring_projects(httpserver: HTTPServer):
+    # GitHub with spring-projects
+    expect_request(httpserver, 'github', '/orgs/spring-projects')
+    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic/branches')
+
+
 def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: str = None, str_replacement: str = None):
     with open('tests/http_mocks/' + type + uri + '.json') as f:
         content = f.read()
@@ -44,12 +54,7 @@ def test_git_type_undefined(httpserver: HTTPServer):
 
 
 def test_same_from_to_github(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic/branches')
+    prepare_github_with_spring_projects(httpserver)
 
     testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
@@ -80,13 +85,8 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 
 def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # GitHub with spring-projects
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic/branches')
+    prepare_github_with_spring_projects(httpserver)
+
     # Gitea with "Empty" org
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     httpserver.expect_request(
@@ -130,12 +130,7 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
     # GitHub with spring-projects
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic/branches')
+    prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
@@ -172,12 +167,7 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
     # GitHub with spring-projects
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic/branches')
+    prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
