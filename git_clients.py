@@ -86,8 +86,9 @@ class GitHubClient(GitClient):
 
 
 class GiteaClient(GitClient):
-    def __init__(self, url, user, password):
-        self.gitea = Gitea(gitea_url=url, auth=(user, password))
+
+    def __init__(self, url: str, login_or_token: str, password: str):
+        self.gitea = Gitea(gitea_url=url, auth=(login_or_token, password))
 
     def get_url(self) -> str:
         return self.gitea.url
@@ -139,13 +140,13 @@ class BitbucketClient(GitClient):
 
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type, user, password):
+    def create_client(url, type: str, login_or_token: str, password: str):
         if 'github'.casefold() == type.casefold() or 'github' in url:
-            return GitHubClient(url, user, password)
+            return GitHubClient(url, login_or_token, password)
         elif 'gitea'.casefold() == type.casefold() or 'gitea' in url:
-            return GiteaClient(url, user, password)
+            return GiteaClient(url, login_or_token, password)
         elif 'bitbucket'.casefold() == type.casefold() or 'bitbucket' in url:
-            return BitbucketClient(url, user, password)
+            return BitbucketClient(url, login_or_token, password)
         else:
             raise ValueError(
                 f'Type "{type}" not supported or not detected from URL "{url}".')
