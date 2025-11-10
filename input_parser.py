@@ -10,10 +10,10 @@ def parse():
         description='Git Platforms Synchronization')
     parser.add_argument('--from-url', required=True,
                         help='Git "from" platform API URL (Required)')
-    parser.add_argument('--from-user',
-                        help='Git "from" user.')
+    parser.add_argument('--from-login',
+                        help='Git "from" login or token.')
     parser.add_argument('--from-password',
-                        help='Git "from" password or token.')
+                        help='Git "from" password.')
     parser.add_argument('--from-org',
                         help='Git "from" organization (or project).', required=True)
     parser.add_argument('--from-type',
@@ -22,10 +22,10 @@ def parse():
                         help='Git "from" proxy (with credentials if needed).')
     parser.add_argument('--to-url', required=True,
                         help='Git "to" platform API URL (Required)')
-    parser.add_argument('--to-user',
-                        help='Git "to" user (Required).', required=True)
+    parser.add_argument('--to-login',
+                        help='Git "to" login or token (Required).', required=True)
     parser.add_argument('--to-password',
-                        help='Git "to" password or token (Required).', required=True)
+                        help='Git "to" password.')
     parser.add_argument('--to-org',
                         help='Git "to" organization (or project).', required=True)
     parser.add_argument(
@@ -51,13 +51,11 @@ def parse():
 def print_args(args: argparse.Namespace):
     logger.info('\n------ Input arguments ------')
     logger.info('Git "from" platform URL    : %s', args.from_url)
-    logger.info('Git "from" user            : %s', args.from_user)
     logger.info('Git "from" org/project     : %s', args.from_org)
     logger.info('Git "from" type            : %s', args.from_type)
     logger.info('Git "from" proxy (defined) : %s',
                 args.from_proxy and len(args.from_proxy) > 0)
     logger.info('Git "to" platform URL      : %s', args.to_url)
-    logger.info('Git "to" user              : %s', args.to_user)
     logger.info('Git "to" org/project       : %s', args.to_org)
     logger.info('Git "to" type              : %s', args.to_type)
     logger.info('Git "to" proxy (defined)   : %s',
