@@ -69,10 +69,22 @@ def test_git_type_undefined(httpserver: HTTPServer):
             httpserver.url_for('/') + '".'
 
 
-def test_same_from_to_github(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
+                '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    with patch.object(sys, 'argv', testargs):
+        git_platforms_synchro.main()
+
+    assert 'Already synchronized.' in caplog.text
+    assert 'All branches already synchronized, do tags only...' in caplog.text
+
+
+def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    prepare_github_with_spring_projects(httpserver)
+
+    testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub', '--from-login', 'ghu_foo1234567890abcdef',
                 '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()

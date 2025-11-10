@@ -1,4 +1,5 @@
 from abc import ABC
+import re
 from github import Github, Auth
 from gitea import Gitea, Organization, Repository, NotFoundException
 
@@ -38,8 +39,13 @@ class GitHubClient(GitClient):
 
     def __init__(self, url, login_or_token: str, password: str = None):
         self.url = url
-        self.github = Github(
-            base_url=url, auth=Auth.Token(login_or_token) if password is None else Auth.Login(login_or_token, password))
+        auth = None
+        if login_or_token is not None:
+            if re.match(r'^gh._\w+$', login_or_token):
+                auth = Auth.Token(login_or_token)
+            elif password is not None:
+                auth = Auth.Login(login_or_token, password)
+        self.github = Github(base_url=url, auth=auth)
 
     def get_url(self) -> str:
         return self.url
