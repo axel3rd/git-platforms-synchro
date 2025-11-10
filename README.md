@@ -1,6 +1,8 @@
+[![Build Status](https://github.com/axel3rd/git-platforms-synchro/workflows/Build/badge.svg)](https://github.com/axel3rd/git-platforms-synchro/actions/workflows/build-dev.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=axel3rd%3Agit-platforms-synchro&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=axel3rd%3Agit-platforms-synchro)
+
 # Git Platforms Synchronization
 
-Synchronize (with rebase) branches of repositories from a Git paltform to another.
+Synchronize branches of repositories from a Git paltform to another (with rebase, merge unsupported).
 
 ## Preamble
 
@@ -23,9 +25,11 @@ pip install -r requirements.txt
 Execution program:
 
 ```
-python3 git_platforms_synchro.py \ 
-    --from-url https://from.git.com --from-org my-org
-    --to-url https://to.git.com --to-user foo --to-password bar --to-org my-org
+python3 git_platforms_synchro.py \
+    --from-url https://api.github.com --from-org spring-projects \
+    --to-url http://localhost:3000 --to-type gitea --to-user foo --to-password bar --to-org MyOrg \
+    --repos-include spring-petclinic,spring-ai-examples \
+    --branches-include "main,spring-ai*"
 ```
 
 ## Options
@@ -39,7 +43,7 @@ Git Platforms Synchronization
 
 options:
   -h, --help            show this help message and exit
-  --from-url FROM_URL   Git "from" platform URL (Required)
+  --from-url FROM_URL   Git "from" platform API URL (Required)
   --from-user FROM_USER
                         Git "from" user.
   --from-password FROM_PASSWORD
@@ -49,7 +53,7 @@ options:
                         Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
                         Git "from" proxy (with credentials if needed).
-  --to-url TO_URL       Git "to" platform URL (Required)
+  --to-url TO_URL       Git "to" platform API URL (Required)
   --to-user TO_USER     Git "to" user (Required).
   --to-password TO_PASSWORD
                         Git "to" password or token (Required).
@@ -68,3 +72,33 @@ options:
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 ```                        
+
+## Development utilities
+
+To instantiate a Gitea accessible via proxy (login/password= `evil/live`), runnable via `docker compose up`:
+
+```
+services:
+  # Gitea platform
+  my.gitea.local:
+    image: docker.io/gitea/gitea:latest-rootless
+    restart: always
+    volumes:
+      - ./data:/var/lib/gitea
+      - ./config:/etc/gitea
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:2222"
+
+  # Proxy server
+  proxy:
+    image: monokal/tinyproxy
+    environment:
+      BASIC_AUTH_USER: evil
+      BASIC_AUTH_PASSWORD: live
+    ports:
+      - '8000:8888/tcp'
+    command: ANY
+```
