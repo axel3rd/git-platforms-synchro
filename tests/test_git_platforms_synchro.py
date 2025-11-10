@@ -29,6 +29,22 @@ def prepare_github_with_spring_projects(httpserver: HTTPServer):
                    '/repos/spring-projects/spring-petclinic/branches')
 
 
+def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bool = False):
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    # Declare empty page two before next first page result, infinite loop otherwise
+    httpserver.expect_request(
+        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
+                   'http://localhost:3000', get_url_root(httpserver))
+    if update_commit:
+        expect_request(httpserver, 'gitea',
+                       '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
+    else:
+        expect_request(httpserver, 'gitea',
+                       '/api/v1/repos/MyOrg/spring-petclinic/branches')
+
+
 def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: str = None, str_replacement: str = None):
     with open('tests/http_mocks/' + type + uri + '.json') as f:
         content = f.read()
@@ -133,15 +149,7 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
-    # Declare empty page two before next first page result, infinite loop otherwise
-    httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
-                   'http://localhost:3000', get_url_root(httpserver))
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
+    prepare_gitea_with_spring_projects(httpserver, update_commit=True)
 
     testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
@@ -170,15 +178,7 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
-    # Declare empty page two before next first page result, infinite loop otherwise
-    httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
-                   'http://localhost:3000', get_url_root(httpserver))
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/branches')
+    prepare_gitea_with_spring_projects(httpserver)
 
     testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-user', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-user', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
