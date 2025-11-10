@@ -9,8 +9,8 @@ from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 def prepare_github_with_spring_projects(httpserver: HTTPServer):
     # GitHub with spring-projects
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic')
     expect_request(httpserver, 'github',
