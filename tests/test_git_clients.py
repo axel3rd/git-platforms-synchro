@@ -4,9 +4,9 @@ from git_clients import GitClientFactory
 from tests.test_utils import get_url_root, expect_request
 
 
-def test_github_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
+def test_github_org_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic')
     expect_request(httpserver, 'github',
@@ -28,16 +28,44 @@ def test_github_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
                                         'spring-petclinic'))
 
 
-def test_github_user(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/orgs/spring-projects')
+    httpserver.expect_oneshot_request(
+        '/orgs/spring-projects/repos', method='POST').respond_with_data(status=201)
+
+    github = GitClientFactory.create_client(
+        get_url_root(httpserver), 'github', 'ghu_xxxx')
+
+    github.create_repo('spring-projects', 'new-repo')
+
+
+def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_request(
+        '/orgs/spring-projects').respond_with_data(status=404)
+    httpserver.expect_oneshot_request(
+        '/user/repos', method='POST').respond_with_data(status=201)
+
+    github = GitClientFactory.create_client(
+        get_url_root(httpserver), 'github', 'ghu_xxxx')
+
+    github.create_repo('spring-projects', 'new-repo')
+
+
+def test_gitea_org_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # TODO Not yet implemented
     assert False, "Not yet implemented"
 
 
-def test_gitea_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # TODO Not yet implemented
     assert False, "Not yet implemented"
 
 
-def test_gitea_user(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_user_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # TODO Not yet implemented
+    assert False, "Not yet implemented"
+
+
+def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # TODO Not yet implemented
     assert False, "Not yet implemented"

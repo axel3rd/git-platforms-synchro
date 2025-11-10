@@ -67,14 +67,14 @@ class GitHubClient(GitClient):
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in self.github.get_organization(org).get_repos():
+        for repo in self.github.get_user(org).get_repos():
             repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
         check_inputs(org, repo)
         try:
-            return self.github.get_organization(org).get_repo(repo) is not None
+            return self.github.get_user(org).get_repo(repo) is not None
         except GithubException as e:
             if e.status == 404:
                 return False
@@ -82,25 +82,31 @@ class GitHubClient(GitClient):
 
     def get_repo_description(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.github.get_organization(org).get_repo(repo).description
+        return self.github.get_user(org).get_repo(repo).description
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.github.get_organization(org).get_repo(repo).clone_url
+        return self.github.get_user(org).get_repo(repo).clone_url
 
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        for branch in self.github.get_organization(org).get_repo(repo).get_branches():
+        for branch in self.github.get_user(org).get_repo(repo).get_branches():
             branches_commits[branch.name] = branch.commit.sha
         return branches_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
-        # Warning, does not work for 'user' accounts, only for 'org' accounts
-        # Use github.get_user().create_repo() for that case
-        self.github.get_organization(org).create_repo(
-            name=repo, description=description, auto_init=False)
+        try:
+            self.github.get_organization(org).create_repo(
+                name=repo, description=description, auto_init=False)
+        except GithubException as e:
+            if e.status == 404:
+                # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
+                self.github.get_user().create_repo(
+                    name=repo, description=description, auto_init=False)
+            else:
+                raise e
 
 
 class GiteaClient(GitClient):
