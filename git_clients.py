@@ -1,5 +1,6 @@
 from abc import ABC
-from github import Github
+import re
+from github import Github, Auth
 from gitea import Gitea, Organization, Repository, NotFoundException
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
@@ -36,10 +37,15 @@ class GitClient(ABC):
 
 class GitHubClient(GitClient):
 
-    def __init__(self, url, login_or_token: str, password: str):
+    def __init__(self, url, login_or_token: str, password: str = None):
         self.url = url
-        self.github = Github(
-            base_url=url, login_or_token=login_or_token, password=password)
+        auth = None
+        if login_or_token is not None:
+            if re.match(r'^gh._\w+$', login_or_token):
+                auth = Auth.Token(login_or_token)
+            elif password is not None:
+                auth = Auth.Login(login_or_token, password)
+        self.github = Github(base_url=url, auth=auth)
 
     def get_url(self) -> str:
         return self.url
@@ -81,13 +87,16 @@ class GitHubClient(GitClient):
             raise ValueError(MSG_EMPTY_ORG)
         if repo is None or len(repo) == 0:
             raise ValueError(MSG_EMPTY_REPO)
+        # Warning, does not work for 'user' accounts, only for 'org' accounts
+        # Use github.get_user().create_repo() for that case
         self.github.get_organization(org).create_repo(
             name=repo, description=description, auto_init=False)
 
 
 class GiteaClient(GitClient):
-    def __init__(self, url, user, password):
-        self.gitea = Gitea(gitea_url=url, auth=(user, password))
+
+    def __init__(self, url: str, login_or_token: str, password: str = None):
+        self.gitea = Gitea(gitea_url=url, auth=(login_or_token, password))
 
     def get_url(self) -> str:
         return self.gitea.url
@@ -133,19 +142,19 @@ class GiteaClient(GitClient):
 
 
 class BitbucketClient(GitClient):
-    def __init__(self, url, user, password):
+    def __init__(self, url: str, login_or_token: str, password: str = None):
         raise NotImplementedError('Not implemented yet')
 
 
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type, user, password):
+    def create_client(url, type: str, login_or_token: str, password: str = None) -> GitClient:
         if 'github'.casefold() == type.casefold() or 'github' in url:
-            return GitHubClient(url, user, password)
+            return GitHubClient(url, login_or_token, password)
         elif 'gitea'.casefold() == type.casefold() or 'gitea' in url:
-            return GiteaClient(url, user, password)
+            return GiteaClient(url, login_or_token, password)
         elif 'bitbucket'.casefold() == type.casefold() or 'bitbucket' in url:
-            return BitbucketClient(url, user, password)
+            return BitbucketClient(url, login_or_token, password)
         else:
             raise ValueError(
                 f'Type "{type}" not supported or not detected from URL "{url}".')

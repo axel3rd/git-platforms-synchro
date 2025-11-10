@@ -27,7 +27,7 @@ Execution program:
 ```
 python3 git_platforms_synchro.py \
     --from-url https://api.github.com --from-org spring-projects \
-    --to-url http://localhost:3000 --to-type gitea --to-user foo --to-password bar --to-org MyOrg \
+    --to-url http://localhost:3000 --to-type gitea --to-login foo --to-password bar --to-org MyOrg \
     --repos-include spring-petclinic,spring-ai-examples \
     --branches-include "main,spring-ai*"
 ```
@@ -35,28 +35,28 @@ python3 git_platforms_synchro.py \
 ## Options
 
 ```
-usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-user FROM_USER] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY] --to-url TO_URL --to-user TO_USER
-                                --to-password TO_PASSWORD --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE] [--branches-include BRANCHES_INCLUDE]
-                                [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
+usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY] --to-url TO_URL --to-login
+                                TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE]
+                                [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
 
 Git Platforms Synchronization
 
 options:
   -h, --help            show this help message and exit
   --from-url FROM_URL   Git "from" platform API URL (Required)
-  --from-user FROM_USER
-                        Git "from" user.
+  --from-login FROM_LOGIN
+                        Git "from" login or token.
   --from-password FROM_PASSWORD
-                        Git "from" password or token.
+                        Git "from" password.
   --from-org FROM_ORG   Git "from" organization (or project).
   --from-type FROM_TYPE
                         Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
                         Git "from" proxy (with credentials if needed).
   --to-url TO_URL       Git "to" platform API URL (Required)
-  --to-user TO_USER     Git "to" user (Required).
+  --to-login TO_LOGIN   Git "to" login or token (Required).
   --to-password TO_PASSWORD
-                        Git "to" password or token (Required).
+                        Git "to" password.
   --to-org TO_ORG       Git "to" organization (or project).
   --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --to-proxy TO_PROXY   Git "to" proxy (with credentials if needed).
