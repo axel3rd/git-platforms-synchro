@@ -51,6 +51,20 @@ def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtu
     github.create_repo('spring-projects', 'new-repo')
 
 
+def test_github_empty_branches(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic')
+    httpserver.expect_request(
+        '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
+
+    github = GitClientFactory.create_client(
+        get_url_root(httpserver), 'github', 'ghu_xxxx')
+
+    assert 0 == len(github.get_branches('spring-projects',
+                                        'spring-petclinic'))
+
+
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
@@ -99,3 +113,15 @@ def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
         get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
     gitea.create_repo('MyOrg', 'new-repo', 'A new repo')
+
+
+def test_gitea_empty_branches(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/repos/MyOrg/spring-ai-examples-empty')
+
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
+
+    assert 0 == len(gitea.get_branches('MyOrg',
+                                       'spring-ai-examples-empty'))
