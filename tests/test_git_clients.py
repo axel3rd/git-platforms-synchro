@@ -4,7 +4,7 @@ from git_clients import GitClientFactory
 from tests.test_utils import get_url_root, expect_request
 
 
-def test_github_org_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github',
@@ -51,21 +51,51 @@ def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtu
     github.create_repo('spring-projects', 'new-repo')
 
 
-def test_gitea_org_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # TODO Not yet implemented
-    assert False, "Not yet implemented"
+def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
+    # Declare empty page two before next first page result, infinite loop otherwise
+    httpserver.expect_request(
+        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/repos/MyOrg/spring-petclinic/branches')
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/non-existing-repo').respond_with_data(status=404)
+
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
+
+    assert 2 == len(gitea.get_repos('MyOrg'))
+    assert gitea.has_repo('MyOrg', 'spring-petclinic')
+    assert not gitea.has_repo('MyOrg', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/MyOrg/spring-petclinic.git' == gitea.get_repo_clone_url(
+        'MyOrg', 'spring-petclinic')
+    assert 'A (copied) sample Spring-based application' == gitea.get_repo_description(
+        'MyOrg', 'spring-petclinic')
+    assert 8 == len(gitea.get_branches('MyOrg',
+                                       'spring-petclinic'))
 
 
 def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # TODO Not yet implemented
-    assert False, "Not yet implemented"
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    httpserver.expect_request(
+        '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
 
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
-def test_gitea_user_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # TODO Not yet implemented
-    assert False, "Not yet implemented"
+    gitea.create_repo('MyOrg', 'new-repo', 'A new repo')
 
 
 def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # TODO Not yet implemented
-    assert False, "Not yet implemented"
+    httpserver.expect_request(
+        '/api/v1/orgs/MyOrg').respond_with_data(status=404)
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
+    httpserver.expect_request(
+        '/api/v1/user/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
+
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
+
+    gitea.create_repo('MyOrg', 'new-repo', 'A new repo')

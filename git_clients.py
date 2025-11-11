@@ -1,7 +1,7 @@
 from abc import ABC
 import re
 from github import Github, Auth, GithubException
-from gitea import Gitea, Organization, Repository, NotFoundException
+from gitea import Gitea, Organization, User, Repository, NotFoundException
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
@@ -51,7 +51,7 @@ class GitClient(ABC):
 
 class GitHubClient(GitClient):
 
-    def __init__(self, url, login_or_token: str, password: str = None):
+    def __init__(self, url, login_or_token: str = None, password: str = None):
         self.url = url
         auth = None
         if login_or_token is not None:
@@ -111,7 +111,7 @@ class GitHubClient(GitClient):
 
 class GiteaClient(GitClient):
 
-    def __init__(self, url: str, login_or_token: str, password: str = None):
+    def __init__(self, url: str, login_or_token: str = None, password: str = None):
         self.gitea = Gitea(gitea_url=url, auth=(login_or_token, password))
 
     def get_url(self) -> str:
@@ -120,7 +120,7 @@ class GiteaClient(GitClient):
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in Organization.request(self.gitea, org).get_repositories():
+        for repo in User.request(self.gitea, org).get_repositories():
             repos.append(repo.name)
         return repos
 
@@ -147,8 +147,12 @@ class GiteaClient(GitClient):
         return branches_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
-        Organization.request(self.gitea, org).create_repo(
-            repoName=repo, description=description, autoInit=False)
+        try:
+            Organization.request(self.gitea, org).create_repo(
+                repoName=repo, description=description, autoInit=False)
+        except NotFoundException:
+            User.request(self.gitea, org).create_repo(
+                repoName=repo, description=description, autoInit=False)
 
 
 class BitbucketClient(GitClient):
@@ -158,7 +162,7 @@ class BitbucketClient(GitClient):
 
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type: str, login_or_token: str, password: str = None) -> GitClient:
+    def create_client(url, type: str, login_or_token: str = None, password: str = None) -> GitClient:
         if 'github'.casefold() == type.casefold() or 'github' in url:
             return GitHubClient(url, login_or_token, password)
         elif 'gitea'.casefold() == type.casefold() or 'gitea' in url:

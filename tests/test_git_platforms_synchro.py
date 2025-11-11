@@ -18,11 +18,11 @@ def prepare_github_with_spring_projects(httpserver: HTTPServer):
 
 
 def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bool = False):
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
+        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     if update_commit:
         expect_request(httpserver, 'gitea',
@@ -70,11 +70,11 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
 
 
 def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
+        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
@@ -94,7 +94,7 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     # Gitea with "Empty" org
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos', query_string='page=1').respond_with_json([])
+        '/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
     httpserver.expect_oneshot_request(
         '/api/v1/repos/MyOrg/spring-petclinic').respond_with_data(status=404)
     httpserver.expect_request(
