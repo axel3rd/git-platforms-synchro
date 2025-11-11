@@ -34,7 +34,7 @@ def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bo
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
-    testargs = ['prog', '--from-url', httpserver.url_for('/'), '--to-url', httpserver.url_for(
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--to-url', httpserver.url_for(
         '/'), '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'new-org']
     try:
         with patch.object(sys, 'argv', testargs):
@@ -43,14 +43,14 @@ def test_git_type_undefined(httpserver: HTTPServer):
             assert False
     except ValueError as e:
         assert str(e) == 'Type "" not supported or not detected from URL "' + \
-            httpserver.url_for('/') + '".'
+            get_url_root(httpserver) + '".'
 
 
 def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub',
-                '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
+                '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
@@ -61,8 +61,8 @@ def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureF
 def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'GitHub', '--from-login', 'ghu_foo1234567890abcdef',
-                '--to-url', httpserver.url_for('/'), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'ghu_foo1234567890abcdef',
+                '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
@@ -80,8 +80,8 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
 
-    testargs = ['prog', '--dry-run', '--from-url', httpserver.url_for('/'), '--from-type', 'Gitea', '--from-login', 'foo', '--from-password', 'bar',
-                '--to-url', httpserver.url_for('/'), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'Gitea', '--from-login', 'foo', '--from-password', 'bar',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
