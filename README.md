@@ -75,7 +75,7 @@ options:
 
 ## Development utilities
 
-To instantiate a Gitea accessible on `http://my.gitea.local:3000` via proxy (login/password= `evil/live`, port `8000`), runnable via `docker compose up`:
+To instantiate a Gitea accessible on `http://my.gitea.local:3000` via proxy (login/password= `evil/live`, port `8000`) or natively on `http://localhost:3000`, use this `compose.yaml` runnable via `docker compose up`:
 
 ```
 services:
