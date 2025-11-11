@@ -45,12 +45,13 @@ def configure_remote_to(repo: Repo, clone_url_to: str):
         repo.create_remote(GIT_REMOTE_TO, clone_url_to)
 
 
-def repo_mirror(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str):
+def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info(
             '  Dry-run mode, skipping repository creation and mirroring.')
         return
-    git_to.create_repo(org_to, repo)
+    if create_repo:
+        git_to.create_repo(org_to, repo, description)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     repo_from_cloned = git_clone(clone_url_from, mirror=True)
     configure_remote_to(repo_from_cloned, clone_url_to)
@@ -93,14 +94,29 @@ def main() -> int:
     for repo in input_parser.reduce(git_from.get_repos(args.from_org), args.repos_include, args.repos_exclude):
         logger.info('Repository: %s', repo)
         clone_url_from = git_from.get_repo_clone_url(args.from_org, repo)
+
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
-            repo_mirror(args.dry_run, clone_url_from,
+            description = git_from.get_repo_description(args.from_org, repo)
+            repo_mirror(True, args.dry_run, clone_url_from,
+                        git_to, args.to_org, repo, description)
+            continue
+
+        branches_commits_from = git_from.get_branches(args.from_org, repo)
+        if len(branches_commits_from) == 0:
+            logger.info(
+                '  Repository has no branches on "from" platform, skipping.')
+            continue
+
+        branches_commits_to = git_to.get_branches(args.to_org, repo)
+        if len(branches_commits_to) == 0:
+            logger.info(
+                '  Repository has no branches on "to" platform, will be mirrored.')
+            repo_mirror(False, args.dry_run, clone_url_from,
                         git_to, args.to_org, repo)
             continue
-        branches_commits_from = git_from.get_branches(args.from_org, repo)
-        branches_commits_to = git_to.get_branches(args.to_org, repo)
+
         branches_updated = 0
         for branch in input_parser.reduce(branches_commits_from.keys(), args.branches_include, args.branches_exclude):
             logger.info('  Branch: %s', branch)
@@ -115,9 +131,11 @@ def main() -> int:
             branches_updated += 1
             repo_branch_sync(args.dry_run, clone_url_from,
                              git_to, args.to_org, repo, branch)
-        if branches_updated == 0:
+
+        tags_commits_from = git_from.get_tags(args.from_org, repo)
+        tags_commits_to = git_to.get_tags(args.to_org, repo)
+        if branches_updated == 0 and len(tags_commits_from) != len(tags_commits_to):
             logger.info('  All branches already synchronized, do tags only...')
-            # TODO : Check tags via API, should be sync if number of tags differ
             repo_tags_sync(
                 args.dry_run, clone_url_from, git_to, args.to_org, repo)
 
