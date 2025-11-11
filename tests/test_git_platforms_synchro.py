@@ -7,6 +7,12 @@ from pytest import LogCaptureFixture, fail
 from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 
+def test_args_github_to_gitea(httpserver: HTTPServer):
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    return testargs
+
+
 def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True, prepare_tags: bool = True):
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/users/spring-projects')
@@ -104,9 +110,7 @@ def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
         '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
     prepare_gitea_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         git_platforms_synchro.main()
 
     assert 'Repository has no branches on "from" platform, skipping.' in caplog.text
@@ -131,9 +135,7 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         try:
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
@@ -162,9 +164,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         try:
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
@@ -188,10 +188,7 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     # Gitea with same repo
     prepare_gitea_with_spring_projects(httpserver, update_commit=True)
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
-
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         try:
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
@@ -217,10 +214,7 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     httpserver.expect_request(
         '/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
-
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         try:
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
@@ -239,10 +233,7 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     # Gitea with same repo
     prepare_gitea_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
-
-    with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
