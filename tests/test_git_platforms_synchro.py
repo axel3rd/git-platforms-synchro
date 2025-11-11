@@ -7,14 +7,15 @@ from pytest import LogCaptureFixture, fail
 from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 
-def prepare_github_with_spring_projects(httpserver: HTTPServer):
+def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True):
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic/branches')
+    if prepare_branches:
+        expect_request(httpserver, 'github',
+                       '/repos/spring-projects/spring-petclinic/branches')
 
 
 def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bool = False):
@@ -88,7 +89,21 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert 'All branches already synchronized, do tags only...' in caplog.text
 
 
-def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    prepare_github_with_spring_projects(httpserver, prepare_branches=False)
+    httpserver.expect_request(
+        '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
+    prepare_gitea_with_spring_projects(httpserver)
+
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    with patch.object(sys, 'argv', testargs):
+        git_platforms_synchro.main()
+
+    assert 'Repository has no branches on "from" platform, skipping.' in caplog.text
+
+
+def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with "Empty" org
@@ -115,6 +130,37 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
             fail('Expected GitCommandError')
         except GitCommandError:
             assert 'Repository does not exist on "to" plaform, will be created as mirror.' in caplog.text
+            assert 'Reusing existing cloned repo ' + \
+                get_url_root(httpserver) + \
+                '/spring-projects/spring-petclinic.git' in caplog.text
+            assert 'The requested URL returned error: 542' in caplog.text
+
+
+def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    prepare_github_with_spring_projects(httpserver)
+
+    # Gitea with "Empty" org
+    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    httpserver.expect_request(
+        '/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
+
+    # Empty repo on first call and newly created repo at second call ('empty' value not important in this case)
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
+                   '"empty": false,', '"empty": true,')
+
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
+    mock_cloned_repo(httpserver, bare=True)
+    httpserver.expect_request(
+        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
+
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    with patch.object(sys, 'argv', testargs):
+        try:
+            git_platforms_synchro.main()
+            fail('Expected GitCommandError')
+        except GitCommandError:
+            assert 'Repository has no branches on "to" platform, will be mirrored.' in caplog.text
             assert 'Reusing existing cloned repo ' + \
                 get_url_root(httpserver) + \
                 '/spring-projects/spring-petclinic.git' in caplog.text
