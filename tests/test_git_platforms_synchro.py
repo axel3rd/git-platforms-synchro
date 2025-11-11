@@ -1,28 +1,16 @@
 import sys
-import shutil
-import json
-import tarfile
-import pytest_httpserver
 import git_platforms_synchro
 from git import GitCommandError
 from unittest.mock import patch
 from pytest_httpserver import HTTPServer
 from pytest import LogCaptureFixture, fail
-
-
-def get_url_root(httpserver: HTTPServer) -> str:
-    return httpserver.url_for('/').rstrip('/')
-
-
-def load_json(file: str, url_to_mock: str, url_replacement: str):
-    with open(file) as f:
-        return json.loads(f.read().replace(url_to_mock, url_replacement))
+from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 
 def prepare_github_with_spring_projects(httpserver: HTTPServer):
     # GitHub with spring-projects
-    expect_request(httpserver, 'github', '/orgs/spring-projects')
-    expect_request(httpserver, 'github', '/orgs/spring-projects/repos')
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic')
     expect_request(httpserver, 'github',
@@ -30,30 +18,18 @@ def prepare_github_with_spring_projects(httpserver: HTTPServer):
 
 
 def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bool = False):
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
-                   'http://localhost:3000', get_url_root(httpserver))
+        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     if update_commit:
         expect_request(httpserver, 'gitea',
                        '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
     else:
         expect_request(httpserver, 'gitea',
                        '/api/v1/repos/MyOrg/spring-petclinic/branches')
-
-
-def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: str = None, str_replacement: str = None):
-    with open('tests/http_mocks/' + type + uri + '.json') as f:
-        content = f.read()
-    if type == 'github':
-        content = content.replace(
-            'https://api.github.com/', httpserver.url_for('/'))
-    if str_to_replace and str_replacement:
-        content = content.replace(str_to_replace, str_replacement)
-    httpserver.expect_request(uri).respond_with_json(json.loads(content))
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
@@ -94,11 +70,11 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
 
 
 def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg/repos')
+        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
@@ -118,20 +94,16 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
     # Gitea with "Empty" org
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos', query_string='page=1').respond_with_json([])
+        '/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
     httpserver.expect_oneshot_request(
         '/api/v1/repos/MyOrg/spring-petclinic').respond_with_data(status=404)
     httpserver.expect_request(
         '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
     # Newly created repo at second call
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
-                   'http://localhost:3000', get_url_root(httpserver))
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
 
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
-    shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
-                  ignore_errors=True)
-    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
-        tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY)
+    mock_cloned_repo(httpserver, bare=True)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
@@ -143,17 +115,15 @@ def test_from_github_to_gitea_create(httpserver: HTTPServer, caplog: LogCaptureF
             fail('Expected GitCommandError')
         except GitCommandError:
             assert 'Repository does not exist on "to" plaform, will be created as mirror.' in caplog.text
-            assert 'Reusing existing cloned repo https://github.com/spring-projects/spring-petclinic.git' in caplog.text
+            assert 'Reusing existing cloned repo ' + \
+                get_url_root(httpserver) + \
+                '/spring-projects/spring-petclinic.git' in caplog.text
             assert 'The requested URL returned error: 542' in caplog.text
 
 
 def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
-    shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
-                  ignore_errors=True)
-    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:
-        tar.extractall(
-            path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
+    mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
@@ -171,18 +141,16 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
         except GitCommandError:
-            assert 'Reusing existing cloned repo https://github.com/spring-projects/spring-petclinic.git' in caplog.text
+            assert 'Reusing existing cloned repo ' + \
+                get_url_root(httpserver) + \
+                '/spring-projects/spring-petclinic.git' in caplog.text
             assert 'Synchronize branch...' in caplog.text
             assert 'The requested URL returned error: 542' in caplog.text
 
 
 def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
-    shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
-                  ignore_errors=True)
-    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:
-        tar.extractall(
-            path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
+    mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
@@ -200,6 +168,8 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
         except GitCommandError:
-            assert 'Reusing existing cloned repo https://github.com/spring-projects/spring-petclinic.git' in caplog.text
+            assert 'Reusing existing cloned repo ' + \
+                get_url_root(httpserver) + \
+                '/spring-projects/spring-petclinic.git' in caplog.text
             assert 'All branches already synchronized, do tags only...' in caplog.text
             assert 'The requested URL returned error: 542' in caplog.text
