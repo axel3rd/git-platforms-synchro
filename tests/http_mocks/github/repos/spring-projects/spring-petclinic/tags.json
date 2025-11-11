@@ -1,0 +1,12 @@
+[
+  {
+    "name": "1.5.x",
+    "zipball_url": "https://api.github.com/repos/spring-projects/spring-petclinic/zipball/refs/tags/1.5.x",
+    "tarball_url": "https://api.github.com/repos/spring-projects/spring-petclinic/tarball/refs/tags/1.5.x",
+    "commit": {
+      "sha": "c36452a2c34443ae26b4ecbba4f149906af14717",
+      "url": "https://api.github.com/repos/spring-projects/spring-petclinic/commits/c36452a2c34443ae26b4ecbba4f149906af14717"
+    },
+    "node_id": "MDM6UmVmNzUxNzkxODpyZWZzL3RhZ3MvMS41Lng="
+  }
+]

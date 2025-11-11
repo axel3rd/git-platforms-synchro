@@ -36,6 +36,10 @@ class GitClient(ABC):
         # Should return a dictionary with branch names as keys and commit hashes as values
         pass
 
+    def get_tags(self, org: str, repo: str) -> dict:
+        # Should return a dictionary with tag names as keys and commit hashes as values
+        pass
+
     def get_repo_description(self, org: str, repo: str) -> str:
         # Should return the description of the repository
         pass
@@ -95,6 +99,13 @@ class GitHubClient(GitClient):
             branches_commits[branch.name] = branch.commit.sha
         return branches_commits
 
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.github.get_user(org).get_repo(repo).get_tags():
+            tags_commits[tag.name] = tag.commit.sha
+        return tags_commits
+
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
         try:
@@ -148,6 +159,14 @@ class GiteaClient(GitClient):
         for branch in r.get_branches():
             branches_commits[branch.name] = branch.commit["id"]
         return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        results = self.gitea.requests_get('/repos/%s/%s/tags' % (org, repo))
+        for result in results:
+            tags_commits[result['name']] = result['id']
+        return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         try:

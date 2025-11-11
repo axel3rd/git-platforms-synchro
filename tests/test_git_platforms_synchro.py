@@ -7,7 +7,7 @@ from pytest import LogCaptureFixture, fail
 from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 
-def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True):
+def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True, prepare_tags: bool = True):
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
@@ -16,21 +16,28 @@ def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches
     if prepare_branches:
         expect_request(httpserver, 'github',
                        '/repos/spring-projects/spring-petclinic/branches')
+    if prepare_tags:
+        expect_request(httpserver, 'github',
+                       '/repos/spring-projects/spring-petclinic/tags')
 
 
-def prepare_gitea_with_spring_projects(httpserver: HTTPServer, update_commit: bool = False):
+def prepare_gitea_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True, prepare_tags: bool = True, update_commit: bool = False):
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     # Declare empty page two before next first page result, infinite loop otherwise
     httpserver.expect_request(
         '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
-    if update_commit:
+    if prepare_branches:
+        if update_commit:
+            expect_request(httpserver, 'gitea',
+                           '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
+        else:
+            expect_request(httpserver, 'gitea',
+                           '/api/v1/repos/MyOrg/spring-petclinic/branches')
+    if prepare_tags:
         expect_request(httpserver, 'gitea',
-                       '/api/v1/repos/MyOrg/spring-petclinic/branches', '6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', 'bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
-    else:
-        expect_request(httpserver, 'gitea',
-                       '/api/v1/repos/MyOrg/spring-petclinic/branches')
+                       '/api/v1/repos/MyOrg/spring-petclinic/tags')
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
@@ -55,7 +62,7 @@ def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureF
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
-    assert 'All branches already synchronized, do tags only...' in caplog.text
+    assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
 def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -67,7 +74,7 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
-    assert 'All branches already synchronized, do tags only...' in caplog.text
+    assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
 def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -79,6 +86,8 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/repos/MyOrg/spring-petclinic/tags')
 
     testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'Gitea', '--from-login', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
@@ -86,7 +95,7 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
-    assert 'All branches already synchronized, do tags only...' in caplog.text
+    assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
 def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -204,7 +213,9 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
-    prepare_gitea_with_spring_projects(httpserver)
+    prepare_gitea_with_spring_projects(httpserver, prepare_tags=False)
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
     testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
@@ -219,3 +230,22 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
                 '/spring-projects/spring-petclinic.git' in caplog.text
             assert 'All branches already synchronized, do tags only...' in caplog.text
             assert 'The requested URL returned error: 542' in caplog.text
+
+
+def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver)
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver)
+
+    testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
+                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main']
+
+    with patch.object(sys, 'argv', testargs):
+        git_platforms_synchro.main()
+
+    assert 'Already synchronized.' in caplog.text
+    assert 'Synchronize branch...' not in caplog.text
+    assert 'All branches already synchronized, do tags only...' not in caplog.text
+    assert 'Git Platforms Synchronization finished sucessfully.' in caplog.text

@@ -11,6 +11,8 @@ def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
                    '/repos/spring-projects/spring-petclinic')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic/branches')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic/tags')
     httpserver.expect_request(
         '/repos/spring-projects/non-existing-repo').respond_with_data(status=404)
 
@@ -26,6 +28,10 @@ def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
         'spring-projects', 'spring-petclinic')
     assert 8 == len(github.get_branches('spring-projects',
                                         'spring-petclinic'))
+    assert 1 == len(github.get_tags('spring-projects',
+                                    'spring-petclinic'))
+    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == github.get_tags('spring-projects',
+                                                                         'spring-petclinic')['1.5.x']
 
 
 def test_github_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -51,18 +57,22 @@ def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtu
     github.create_repo('spring-projects', 'new-repo')
 
 
-def test_github_empty_branches(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github',
                    '/repos/spring-projects/spring-petclinic')
     httpserver.expect_request(
         '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
+    httpserver.expect_request(
+        '/repos/spring-projects/spring-petclinic/tags').respond_with_data('[]')
 
     github = GitClientFactory.create_client(
         get_url_root(httpserver), 'github', 'ghu_xxxx')
 
     assert 0 == len(github.get_branches('spring-projects',
                                         'spring-petclinic'))
+    assert 0 == len(github.get_tags('spring-projects',
+                                    'spring-petclinic'))
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -74,6 +84,8 @@ def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches')
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/repos/MyOrg/spring-petclinic/tags')
     httpserver.expect_request(
         '/api/v1/repos/MyOrg/non-existing-repo').respond_with_data(status=404)
 
@@ -89,6 +101,10 @@ def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
         'MyOrg', 'spring-petclinic')
     assert 8 == len(gitea.get_branches('MyOrg',
                                        'spring-petclinic'))
+    assert 1 == len(gitea.get_tags('MyOrg',
+                                   'spring-petclinic'))
+    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gitea.get_tags('MyOrg',
+                                                                        'spring-petclinic')['1.5.x']
 
 
 def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -115,13 +131,17 @@ def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
     gitea.create_repo('MyOrg', 'new-repo', 'A new repo')
 
 
-def test_gitea_empty_branches(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-ai-examples-empty')
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-ai-examples-empty/tags').respond_with_data('[]')
 
     gitea = GitClientFactory.create_client(
         get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
     assert 0 == len(gitea.get_branches('MyOrg',
                                        'spring-ai-examples-empty'))
+    assert 0 == len(gitea.get_tags('MyOrg',
+                                   'spring-ai-examples-empty'))
