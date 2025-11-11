@@ -45,12 +45,12 @@ def configure_remote_to(repo: Repo, clone_url_to: str):
         repo.create_remote(GIT_REMOTE_TO, clone_url_to)
 
 
-def repo_mirror(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str):
+def repo_mirror(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info(
             '  Dry-run mode, skipping repository creation and mirroring.')
         return
-    git_to.create_repo(org_to, repo)
+    git_to.create_repo(org_to, repo, description)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     repo_from_cloned = git_clone(clone_url_from, mirror=True)
     configure_remote_to(repo_from_cloned, clone_url_to)
@@ -96,8 +96,9 @@ def main() -> int:
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
+            description = git_from.get_repo_description(args.from_org, repo)
             repo_mirror(args.dry_run, clone_url_from,
-                        git_to, args.to_org, repo)
+                        git_to, args.to_org, repo, description)
             continue
         branches_commits_from = git_from.get_branches(args.from_org, repo)
         branches_commits_to = git_to.get_branches(args.to_org, repo)
