@@ -85,6 +85,8 @@ services:
   # Gitea platform
   my.gitea.local:
     image: docker.io/gitea/gitea:latest-rootless
+    environment:
+      GITEA__server__ROOT_URL: http://my.gitea.local:3000
     restart: always
     volumes:
       - ./data:/var/lib/gitea

@@ -25,14 +25,14 @@ def log_init(level: str):
 def git_clone(url: str, mirror: bool = False) -> Repo:
     if os.path.exists(TMP_REPO_GIT_DIRECTORY):
         repo_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
-        origin_url = repo_cloned.config_reader(
-        ).get_value('remote "origin"', 'url')
+        origin_url = repo_cloned.remote('origin').url
         if repo_cloned.bare == mirror and origin_url == url:
             logging.debug('Reusing existing cloned repo %s', origin_url)
             return repo_cloned
         else:
             shutil.rmtree(TMP_REPO_GIT_DIRECTORY, ignore_errors=True)
     logging.debug('Cloning repo %s', url)
+    # TODO configure ssl verify & proxy here
     repo_from_cloned = Repo.clone_from(
         url, TMP_REPO_GIT_DIRECTORY, mirror=mirror)
     return repo_from_cloned
@@ -55,6 +55,7 @@ def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, git_to: G
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     repo_from_cloned = git_clone(clone_url_from, mirror=True)
     configure_remote_to(repo_from_cloned, clone_url_to)
+    # TODO configure ssl verify & proxy here
     repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True)
 
 
@@ -66,6 +67,7 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, git_to: GitClient, org_
     repo_from_cloned.git.checkout(branch)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to)
+    # TODO configure ssl verify & proxy here
     repo_from_cloned.remote(GIT_REMOTE_TO).push()
 
 
@@ -76,6 +78,7 @@ def repo_tags_sync(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to
     repo_from_cloned = git_clone(clone_url_from)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to)
+    # TODO configure ssl verify & proxy here
     repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True)
 
 
