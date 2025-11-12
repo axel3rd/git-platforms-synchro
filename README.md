@@ -10,7 +10,6 @@ Synchronize branches of repositories from a Git paltform to another (with rebase
 
 Currently not implemented:
 - Bitbucket
-- Proxy support
 
 ## Usage
 
@@ -35,9 +34,9 @@ python3 git_platforms_synchro.py \
 ## Options
 
 ```
-usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY] --to-url TO_URL --to-login
-                                TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE]
-                                [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
+usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY] [--from-disable-ssl-verify]
+                                --to-url TO_URL --to-login TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--to-disable-ssl-verify] [--repos-include REPOS_INCLUDE]
+                                [--repos-exclude REPOS_EXCLUDE] [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
 
 Git Platforms Synchronization
 
@@ -53,6 +52,8 @@ options:
                         Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
                         Git "from" proxy (with credentials if needed).
+  --from-disable-ssl-verify
+                        Git "from" disable SSL verification.
   --to-url TO_URL       Git "to" platform API URL (Required)
   --to-login TO_LOGIN   Git "to" login or token (Required).
   --to-password TO_PASSWORD
@@ -60,6 +61,8 @@ options:
   --to-org TO_ORG       Git "to" organization (or project).
   --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --to-proxy TO_PROXY   Git "to" proxy (with credentials if needed).
+  --to-disable-ssl-verify
+                        Git "to" disable SSL verification.
   --repos-include REPOS_INCLUDE
                         Repositories names patterns to include (comma separated).
   --repos-exclude REPOS_EXCLUDE

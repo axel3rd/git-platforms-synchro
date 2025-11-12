@@ -59,6 +59,17 @@ def test_git_type_undefined(httpserver: HTTPServer):
             get_url_root(httpserver) + '".'
 
 
+def test_from_github_proxy_not_implemented(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-proxy', 'http://my-proxy:8080', '--from-login', 'ghu_foo1234567890abcdef',
+                '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    with patch.object(sys, 'argv', testargs):
+        try:
+            git_platforms_synchro.main()
+            fail('Expected NotImplementedError')
+        except NotImplementedError as e:
+            assert 'Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.' in e.args
+
+
 def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 

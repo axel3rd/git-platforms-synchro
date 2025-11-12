@@ -55,7 +55,10 @@ class GitClient(ABC):
 
 class GitHubClient(GitClient):
 
-    def __init__(self, url, login_or_token: str = None, password: str = None):
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        if proxy is not None:
+            raise NotImplementedError(
+                'Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')
         self.url = url
         auth = None
         if login_or_token is not None:
@@ -63,7 +66,7 @@ class GitHubClient(GitClient):
                 auth = Auth.Token(login_or_token)
             elif password is not None:
                 auth = Auth.Login(login_or_token, password)
-        self.github = Github(base_url=url, auth=auth)
+        self.github = Github(base_url=url, auth=auth, verify=ssl_verify)
 
     def get_url(self) -> str:
         return self.url
@@ -122,8 +125,9 @@ class GitHubClient(GitClient):
 
 class GiteaClient(GitClient):
 
-    def __init__(self, url: str, login_or_token: str = None, password: str = None):
-        self.gitea = Gitea(gitea_url=url, auth=(login_or_token, password))
+    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.gitea = Gitea(gitea_url=url, auth=(
+            login_or_token, password), verify=ssl_verify, proxy=proxy)
 
     def get_url(self) -> str:
         return self.gitea.url
@@ -178,19 +182,19 @@ class GiteaClient(GitClient):
 
 
 class BitbucketClient(GitClient):
-    def __init__(self, url: str, login_or_token: str, password: str = None):
+    def __init__(self, url: str, login_or_token: str, password: str = None, ssl_verify: bool = True, proxy: str = None):
         raise NotImplementedError('Not implemented yet')
 
 
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type: str, login_or_token: str = None, password: str = None) -> GitClient:
+    def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
         if 'github'.casefold() == type.casefold() or 'github' in url:
-            return GitHubClient(url, login_or_token, password)
+            return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
         elif 'gitea'.casefold() == type.casefold() or 'gitea' in url:
-            return GiteaClient(url, login_or_token, password)
+            return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
         elif 'bitbucket'.casefold() == type.casefold() or 'bitbucket' in url:
-            return BitbucketClient(url, login_or_token, password)
+            return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
                 f'Type "{type}" not supported or not detected from URL "{url}".')

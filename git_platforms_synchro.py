@@ -86,9 +86,9 @@ def main() -> int:
     input_parser.print_args(args)
 
     git_from = GitClientFactory.create_client(
-        args.from_url, args.from_type, args.from_login, args.from_password)
+        args.from_url, args.from_type, args.from_login, args.from_password, not args.from_disable_ssl_verify, args.from_proxy)
     git_to = GitClientFactory.create_client(
-        args.to_url, args.to_type, args.to_login, args.to_password)
+        args.to_url, args.to_type, args.to_login, args.to_password, not args.to_disable_ssl_verify, args.to_proxy)
 
     logger.info('\n------ Processing synchronization ------')
     for repo in input_parser.reduce(git_from.get_repos(args.from_org), args.repos_include, args.repos_exclude):

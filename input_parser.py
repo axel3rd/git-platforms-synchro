@@ -5,6 +5,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def hide(string: str, after: int = 2) -> str:
+    if string is not None and len(string) > after:
+        return string[:after] + '*' * (len(string) - after)
+    return string
+
+
+def hide_url(url: str) -> str:
+    if url is None:
+        return ''
+    # Simple regex to hide credentials in URL
+    return re.sub(r'//(.*?):*(.*?)@', lambda m: '//***@', url)
+
+
 def parse():
     parser = argparse.ArgumentParser(
         description='Git Platforms Synchronization')
@@ -20,6 +33,8 @@ def parse():
                         help='Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--from-proxy',
                         help='Git "from" proxy (with credentials if needed).')
+    parser.add_argument('--from-disable-ssl-verify',
+                        help='Git "from" disable SSL verification.', action='store_true')
     parser.add_argument('--to-url', required=True,
                         help='Git "to" platform API URL (Required)')
     parser.add_argument('--to-login',
@@ -32,6 +47,8 @@ def parse():
         '--to-type', help='Git "to" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--to-proxy',
                         help='Git "to" proxy (with credentials if needed).')
+    parser.add_argument('--to-disable-ssl-verify',
+                        help='Git "to" disable SSL verification.', action='store_true')
     parser.add_argument('--repos-include',
                         help='Repositories names patterns to include (comma separated).', default='')
     parser.add_argument('--repos-exclude',
@@ -51,15 +68,18 @@ def parse():
 def print_args(args: argparse.Namespace):
     logger.info('\n------ Input arguments ------')
     logger.info('Git "from" platform URL    : %s', args.from_url)
+    logger.info('Git "from" login or token  : %s', hide(args.from_login))
     logger.info('Git "from" org/project     : %s', args.from_org)
     logger.info('Git "from" type            : %s', args.from_type)
-    logger.info('Git "from" proxy (defined) : %s',
-                args.from_proxy and len(args.from_proxy) > 0)
+    logger.info('Git "from" proxy           : %s', hide_url(args.from_proxy))
+    logger.info('Git "from" disable SSL     : %s',
+                args.from_disable_ssl_verify)
     logger.info('Git "to" platform URL      : %s', args.to_url)
+    logger.info('Git "to" login or token    : %s', hide(args.to_login))
     logger.info('Git "to" org/project       : %s', args.to_org)
     logger.info('Git "to" type              : %s', args.to_type)
-    logger.info('Git "to" proxy (defined)   : %s',
-                args.to_proxy and len(args.to_proxy) > 0)
+    logger.info('Git "to" proxy             : %s', hide_url(args.to_proxy))
+    logger.info('Git "to" disable SSL       : %s', args.to_disable_ssl_verify)
     logger.info('Repositories include       : %s', args.repos_include)
     logger.info('Repositories exclude       : %s', args.repos_exclude)
     logger.info('Branches include           : %s', args.branches_include)
