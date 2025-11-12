@@ -22,19 +22,25 @@ def log_init(level: str):
         logging.getLogger("gitea").setLevel(logging.WARNING)
 
 
-def git_clone(url: str, mirror: bool = False) -> Repo:
+def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, proxy: str = None) -> Repo:
     if os.path.exists(TMP_REPO_GIT_DIRECTORY):
         repo_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
         origin_url = repo_cloned.remote('origin').url
         if repo_cloned.bare == mirror and origin_url == url:
+            # If already cloned, consider proxy & ssl verify are correct
             logging.debug('Reusing existing cloned repo %s', origin_url)
             return repo_cloned
         else:
             shutil.rmtree(TMP_REPO_GIT_DIRECTORY, ignore_errors=True)
     logging.debug('Cloning repo %s', url)
-    # TODO configure ssl verify & proxy here
+    options = []
+    if disable_ssl_verify:
+        options += ['--config http.sslVerify=false']
+    if proxy:
+        options += [
+            '--config http.proxy={} --config https.proxy={}'.format(proxy, proxy)]
     repo_from_cloned = Repo.clone_from(
-        url, TMP_REPO_GIT_DIRECTORY, mirror=mirror)
+        url, TMP_REPO_GIT_DIRECTORY, mirror=mirror, allow_unsafe_options=True, multi_options=options)
     return repo_from_cloned
 
 
@@ -45,7 +51,7 @@ def configure_remote_to(repo: Repo, clone_url_to: str):
         repo.create_remote(GIT_REMOTE_TO, clone_url_to)
 
 
-def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str, description: str = ''):
+def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info(
             '  Dry-run mode, skipping repository creation and mirroring.')
@@ -53,32 +59,35 @@ def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, git_to: G
     if create_repo:
         git_to.create_repo(org_to, repo, description)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
-    repo_from_cloned = git_clone(clone_url_from, mirror=True)
+    repo_from_cloned = git_clone(
+        url=clone_url_from, mirror=True, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here
+    # TODO configure ssl verify & proxy here or mutualize in git_clone
     repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True)
 
 
-def repo_branch_sync(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str, branch: str):
+def repo_branch_sync(dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str, branch: str):
     if dry_run:
         logger.info('  Dry-run mode, skipping branch synchronization.')
         return
-    repo_from_cloned = git_clone(clone_url_from)
+    repo_from_cloned = git_clone(
+        url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     repo_from_cloned.git.checkout(branch)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here
+    # TODO configure ssl verify & proxy here or mutualize in git_clone
     repo_from_cloned.remote(GIT_REMOTE_TO).push()
 
 
-def repo_tags_sync(dry_run: bool, clone_url_from: str, git_to: GitClient, org_to: str, repo: str):
+def repo_tags_sync(dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str):
     if dry_run:
         logger.info('  Dry-run mode, skipping tags synchronization.')
         return
-    repo_from_cloned = git_clone(clone_url_from)
+    repo_from_cloned = git_clone(
+        url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here
+    # TODO configure ssl verify & proxy here or mutualize in git_clone
     repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True)
 
 
@@ -102,7 +111,7 @@ def main() -> int:
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
             description = git_from.get_repo_description(args.from_org, repo)
-            repo_mirror(True, args.dry_run, clone_url_from,
+            repo_mirror(True, args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
                         git_to, args.to_org, repo, description)
             continue
 
@@ -116,7 +125,7 @@ def main() -> int:
         if len(branches_commits_to) == 0:
             logger.info(
                 '  Repository has no branches on "to" platform, will be mirrored.')
-            repo_mirror(False, args.dry_run, clone_url_from,
+            repo_mirror(False, args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
                         git_to, args.to_org, repo)
             continue
 
@@ -132,7 +141,7 @@ def main() -> int:
                 continue
             logger.info('    Synchronize branch...')
             branches_updated += 1
-            repo_branch_sync(args.dry_run, clone_url_from,
+            repo_branch_sync(args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
                              git_to, args.to_org, repo, branch)
 
         tags_commits_from = git_from.get_tags(args.from_org, repo)
@@ -140,7 +149,7 @@ def main() -> int:
         if branches_updated == 0 and len(tags_commits_from) != len(tags_commits_to):
             logger.info('  All branches already synchronized, do tags only...')
             repo_tags_sync(
-                args.dry_run, clone_url_from, git_to, args.to_org, repo)
+                args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy, git_to, args.to_org, repo)
 
     logger.info('\nGit Platforms Synchronization finished sucessfully.')
     return 0
