@@ -112,9 +112,8 @@ def main() -> int:
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
-            description = git_from.get_repo_description(args.from_org, repo)
             repo_mirror(True, args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
-                        git_to, args.to_org, repo, description)
+                        git_to, args.to_org, repo, args.to_description_prefix + git_from.get_repo_description(args.from_org, repo))
             continue
 
         branches_commits_from = git_from.get_branches(args.from_org, repo)

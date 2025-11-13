@@ -250,4 +250,4 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     assert 'Already synchronized.' in caplog.text
     assert 'Synchronize branch...' not in caplog.text
     assert 'All branches already synchronized, do tags only...' not in caplog.text
-    assert 'Git Platforms Synchronization finished sucessfully.' in caplog.text
+    assert 'Git Platforms Synchronization finished sucessfully. Repos updated: 0/1. Branches updated: 0/2' in caplog.text

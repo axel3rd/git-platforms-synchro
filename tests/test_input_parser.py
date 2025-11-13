@@ -68,14 +68,15 @@ def test_parsing_bool():
 
 def test_display(caplog: LogCaptureFixture):
     testargs = ['prog', '--from-url', 'https://from.git.com', '--from-proxy', 'http://localhost:8000',
-                '--to-url', 'https://to.git.com', '--to-proxy', 'http://evil:live@localhost:8000', '--to-login', 'ghu_xxxxxxxxxxxxxxxxxxxxxxxxx', '--from-org', 'my-org', '--to-org', 'my-org']
+                '--to-url', 'https://to.git.com', '--to-proxy', 'http://evil:live@localhost:8000', '--to-login', 'ghu_xxxxxxxxxxxxxxxxxxxxxxxxx', '--from-org', 'my-org', '--to-org', 'my-org', '--to-description-prefix', 'Synchro - ']
     with patch.object(sys, 'argv', testargs):
         args = input_parser.parse()
     input_parser.print_args(args)
 
-    assert 'Git "from" platform URL    : https://from.git.com' in caplog.text
-    assert 'Git "from" login or token  : None' in caplog.text
-    assert 'Git "from" proxy           : http://localhost:8000' in caplog.text
-    assert 'Git "to" platform URL      : https://to.git.com' in caplog.text
-    assert 'Git "to" login or token    : gh***************************' in caplog.text
-    assert 'Git "to" proxy             : http://***@localhost:8000' in caplog.text
+    assert 'Git "from" platform URL     : https://from.git.com' in caplog.text
+    assert 'Git "from" login or token   : None' in caplog.text
+    assert 'Git "from" proxy            : http://localhost:8000' in caplog.text
+    assert 'Git "to" platform URL       : https://to.git.com' in caplog.text
+    assert 'Git "to" login or token     : gh***************************' in caplog.text
+    assert 'Git "to" proxy              : http://***@localhost:8000' in caplog.text
+    assert 'Git "to" description prefix : Synchro - ' in caplog.text
