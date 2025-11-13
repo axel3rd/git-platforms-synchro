@@ -44,14 +44,18 @@ def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, 
     return repo_from_cloned
 
 
-def configure_remote_to(repo: Repo, clone_url_to: str):
+def configure_remote_to(repo: Repo, clone_url_to: str, proxy: str = '', ssl_verify: bool = True):
     try:
         repo.remote(GIT_REMOTE_TO).set_url(clone_url_to)
     except ValueError:
         repo.create_remote(GIT_REMOTE_TO, clone_url_to)
+    repo.config_writer().set_value('http "' + clone_url_to + '"',
+                                   'sslVerify', str(ssl_verify).lower()).release()
+    repo.config_writer().set_value('http "' + clone_url_to + '"',
+                                   'proxy', proxy if proxy is not None else '').release()
 
 
-def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str, description: str = ''):
+def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str,  proxy_from: str, disable_ssl_verify_from: bool, git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info(
             '  Dry-run mode, skipping repository creation and mirroring.')
@@ -61,12 +65,12 @@ def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, disable_s
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     repo_from_cloned = git_clone(
         url=clone_url_from, mirror=True, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
-    configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here or mutualize in git_clone
+    configure_remote_to(repo_from_cloned, clone_url_to,
+                        proxy_to, not disable_ssl_verify_to)
     repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True)
 
 
-def repo_branch_sync(dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str, branch: str):
+def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,  git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, branch: str):
     if dry_run:
         logger.info('  Dry-run mode, skipping branch synchronization.')
         return
@@ -74,20 +78,20 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, disable_ssl_verify_from
         url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     repo_from_cloned.git.checkout(branch)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
-    configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here or mutualize in git_clone
+    configure_remote_to(repo_from_cloned, clone_url_to,
+                        proxy_to, not disable_ssl_verify_to)
     repo_from_cloned.remote(GIT_REMOTE_TO).push()
 
 
-def repo_tags_sync(dry_run: bool, clone_url_from: str, disable_ssl_verify_from: bool, proxy_from: str, git_to: GitClient, org_to: str, repo: str):
+def repo_tags_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,  git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str):
     if dry_run:
         logger.info('  Dry-run mode, skipping tags synchronization.')
         return
     repo_from_cloned = git_clone(
         url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
-    configure_remote_to(repo_from_cloned, clone_url_to)
-    # TODO configure ssl verify & proxy here or mutualize in git_clone
+    configure_remote_to(repo_from_cloned, clone_url_to,
+                        proxy_to, not disable_ssl_verify_to)
     repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True)
 
 
@@ -112,8 +116,9 @@ def main() -> int:
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
-            repo_mirror(True, args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
-                        git_to, args.to_org, repo, args.to_description_prefix + git_from.get_repo_description(args.from_org, repo))
+            description = git_from.get_repo_description(args.from_org, repo)
+            repo_mirror(True, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
+                        git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, args.to_description_prefix + (description if description is not None else ''))
             continue
 
         branches_commits_from = git_from.get_branches(args.from_org, repo)
@@ -126,8 +131,8 @@ def main() -> int:
         if len(branches_commits_to) == 0:
             logger.info(
                 '  Repository has no branches on "to" platform, will be mirrored.')
-            repo_mirror(False, args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
-                        git_to, args.to_org, repo)
+            repo_mirror(False, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
+                        git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo)
             continue
 
         branches_updated = 0
@@ -143,15 +148,15 @@ def main() -> int:
                 continue
             logger.info('    Synchronize branch...')
             branches_updated += 1
-            repo_branch_sync(args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy,
-                             git_to, args.to_org, repo, branch)
+            repo_branch_sync(args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
+                             git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, branch)
 
         tags_commits_from = git_from.get_tags(args.from_org, repo)
         tags_commits_to = git_to.get_tags(args.to_org, repo)
         if branches_updated == 0 and len(tags_commits_from) != len(tags_commits_to):
             logger.info('  All branches already synchronized, do tags only...')
             repo_tags_sync(
-                args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy, git_to, args.to_org, repo)
+                args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify, git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo)
 
         if branches_updated > 0 or len(tags_commits_from) > len(tags_commits_to):
             total_repos_updated += 1
