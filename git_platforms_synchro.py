@@ -103,8 +103,10 @@ def main() -> int:
         args.to_url, args.to_type, args.to_login, args.to_password, not args.to_disable_ssl_verify, args.to_proxy)
 
     logger.info('\n------ Processing synchronization ------')
+    total_repos_scanned = total_repos_updated = total_branches_scanned = total_branches_updated = 0
     for repo in input_parser.reduce(git_from.get_repos(args.from_org), args.repos_include, args.repos_exclude):
         logger.info('Repository: %s', repo)
+        total_repos_scanned += 1
         clone_url_from = git_from.get_repo_clone_url(args.from_org, repo)
 
         if not git_to.has_repo(args.to_org, repo):
@@ -131,6 +133,7 @@ def main() -> int:
 
         branches_updated = 0
         for branch in input_parser.reduce(branches_commits_from.keys(), args.branches_include, args.branches_exclude):
+            total_branches_scanned += 1
             logger.info('  Branch: %s', branch)
             commit_from = branches_commits_from.get(branch, None)
             logger.info('    Commit From: %s', commit_from)
@@ -151,7 +154,12 @@ def main() -> int:
             repo_tags_sync(
                 args.dry_run, clone_url_from, args.from_disable_ssl_verify, args.from_proxy, git_to, args.to_org, repo)
 
-    logger.info('\nGit Platforms Synchronization finished sucessfully.')
+        if branches_updated > 0 or len(tags_commits_from) > len(tags_commits_to):
+            total_repos_updated += 1
+            total_branches_updated += branches_updated
+
+    logger.info('\nGit Platforms Synchronization finished sucessfully. Repos updated: {}/{}. Branches updated: {}/{}.'.format(
+        total_repos_updated, total_repos_scanned, total_branches_updated, total_branches_scanned))
     return 0
 
 
