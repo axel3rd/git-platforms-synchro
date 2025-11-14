@@ -7,6 +7,7 @@ from git import Repo
 from git_clients import GitClientFactory, GitClient
 
 TMP_REPO_GIT_DIRECTORY = 'tmp-git-repo/'
+GIT_CONFIG_HTTP_PREFIX = 'http'
 GIT_REMOTE_TO = 'sync-to'
 
 logger = logging.getLogger(__name__)
@@ -49,10 +50,13 @@ def configure_remote_to(repo: Repo, clone_url_to: str, proxy: str = '', ssl_veri
         repo.remote(GIT_REMOTE_TO).set_url(clone_url_to)
     except ValueError:
         repo.create_remote(GIT_REMOTE_TO, clone_url_to)
-    repo.config_writer().set_value('http "' + clone_url_to + '"',
+    repo.config_writer().set_value(GIT_CONFIG_HTTP_PREFIX + ' "' + clone_url_to + '"',
                                    'sslVerify', str(ssl_verify).lower()).release()
-    repo.config_writer().set_value('http "' + clone_url_to + '"',
+    repo.config_writer().set_value(GIT_CONFIG_HTTP_PREFIX + ' "' + clone_url_to + '"',
                                    'proxy', proxy if proxy is not None else '').release()
+    # For pushing big files
+    repo.config_writer().set_value(GIT_CONFIG_HTTP_PREFIX + ' "' + clone_url_to +
+                                   '"', 'postBuffer', '524288000').release()
 
 
 def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str,  proxy_from: str, disable_ssl_verify_from: bool, git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, description: str = ''):
@@ -116,6 +120,7 @@ def main() -> int:
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
                 '  Repository does not exist on "to" plaform, will be created as mirror.')
+            total_repos_updated += 1
             description = git_from.get_repo_description(args.from_org, repo)
             repo_mirror(True, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
                         git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, args.to_description_prefix + (description if description is not None else ''))
@@ -131,6 +136,7 @@ def main() -> int:
         if len(branches_commits_to) == 0:
             logger.info(
                 '  Repository has no branches on "to" platform, will be mirrored.')
+            total_repos_updated += 1
             repo_mirror(False, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
                         git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo)
             continue
