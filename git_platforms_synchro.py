@@ -156,7 +156,7 @@ def main() -> int:
         # New repo to create and mirror
         if not git_to.has_repo(args.to_org, repo):
             logger.info(
-                '  Repository does not exist on "to" plaform, will be created as mirror.')
+                '  Repository does not exist on "to" plaform, create as mirror...')
             total_repos_updated += 1
             description = git_from.get_repo_description(args.from_org, repo)
             repo_mirror(True, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
@@ -174,7 +174,7 @@ def main() -> int:
         branches_commits_to = git_to.get_branches(args.to_org, repo)
         if len(branches_commits_to) == 0:
             logger.info(
-                '  Repository has no branches on "to" platform, will be mirrored.')
+                '  Repository has no branches on "to" platform, synchronize as mirror...')
             total_repos_updated += 1
             repo_mirror(False, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
                         git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo)

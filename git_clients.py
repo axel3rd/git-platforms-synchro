@@ -2,6 +2,7 @@ from abc import ABC
 import re
 from github import Github, Auth, GithubException
 from gitea import Gitea, Organization, User, Repository, NotFoundException
+from atlassian import Bitbucket
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
@@ -173,6 +174,7 @@ class GiteaClient(GitClient):
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
         try:
             Organization.request(self.gitea, org).create_repo(
                 repoName=repo, description=description, autoInit=False)
@@ -182,8 +184,55 @@ class GiteaClient(GitClient):
 
 
 class BitbucketClient(GitClient):
-    def __init__(self, url: str, login_or_token: str, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        raise NotImplementedError('Not implemented yet')
+
+    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.bitbucket = Bitbucket(
+            url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
+        self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
+
+    def get_url(self) -> str:
+        return self.bitbucket.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in self.bitbucket.repo_all_list(org):
+            repos.append(repo['slug'])
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        return self.bitbucket.repo_exists(org, repo)
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.bitbucket.get_repo(org, repo)['description']
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        for link in self.bitbucket.get_repo(org, repo)['links']['clone']:
+            if 'http' == link['name']:
+                return link['href']
+        raise ValueError('Cannot not found http clone link')
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        for branch in self.bitbucket.get_branches(org, repo, details=False):
+            branches_commits[branch['displayId']] = branch['latestCommit']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.bitbucket.get_tags(org, repo, limit=0):
+            tags_commits[tag['displayId']] = tag['latestCommit']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        self.bitbucket.create_repo(org, repo)
+        self.bitbucket.update_repo(org, repo, description=description)
 
 
 class GitClientFactory:
