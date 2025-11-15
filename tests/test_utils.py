@@ -40,6 +40,9 @@ def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: 
     if type == 'gitea':
         content = content.replace(
             'http://localhost:3000', get_url_root(httpserver))
+    if type == 'bitbucket':
+        content = content.replace(
+            'http://localhost:7990', get_url_root(httpserver))
     if str_to_replace and str_replacement:
         content = content.replace(str_to_replace, str_replacement)
     httpserver.expect_request(uri).respond_with_json(json.loads(content))

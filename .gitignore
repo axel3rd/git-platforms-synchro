@@ -8,4 +8,5 @@
 
 # Temporary or testing files
 /tmp-git-repo/
+/htmlcov/
 coverage.xml

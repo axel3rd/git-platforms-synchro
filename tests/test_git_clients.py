@@ -145,3 +145,65 @@ def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFix
                                        'spring-ai-examples-empty'))
     assert 0 == len(gitea.get_tags('MyOrg',
                                    'spring-ai-examples-empty'))
+
+
+def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic/branches')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic/tags')
+    httpserver.expect_request(
+        '/rest/api/1.0/projects/MyOrg/repos/non-existing-repo').respond_with_data(status=404)
+
+    bitbucket = GitClientFactory.create_client(
+        get_url_root(httpserver), 'bitbucket', 'fake_token')
+
+    assert 2 == len(bitbucket.get_repos('MyOrg'))
+    assert bitbucket.has_repo('MyOrg', 'spring-petclinic')
+    assert not bitbucket.has_repo('MyOrg', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/scm/myorg/spring-petclinic.git' == bitbucket.get_repo_clone_url(
+        'MyOrg', 'spring-petclinic')
+    assert 'A sample Spring-based application' == bitbucket.get_repo_description(
+        'MyOrg', 'spring-petclinic')
+    assert 8 == len(bitbucket.get_branches('MyOrg',
+                                           'spring-petclinic'))
+    assert 1 == len(bitbucket.get_tags('MyOrg',
+                                       'spring-petclinic'))
+    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == bitbucket.get_tags('MyOrg',
+                                                                            'spring-petclinic')['1.5.x']
+
+
+def test_bitbucket_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # expect_request(httpserver, 'bitbucket', '/orgs/MyOrg')
+    httpserver.expect_oneshot_request(
+        '/rest/api/1.0/projects/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'slug': 'new-repo', 'name': 'new-repo'})
+    httpserver.expect_oneshot_request(
+        '/rest/api/1.0/projects/MyOrg/repos/new-repo', method='PUT').respond_with_json(status=200, response_json={'id': 42, 'slug': 'new-repo', 'name': 'new-repo'})
+
+    bitbucket = GitClientFactory.create_client(
+        get_url_root(httpserver), 'bitbucket', 'ghu_xxxx')
+
+    bitbucket.create_repo('MyOrg', 'new-repo')
+
+
+def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples/branches')
+    expect_request(httpserver, 'bitbucket',
+                   '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples/tags')
+
+    bitbucket = GitClientFactory.create_client(
+        get_url_root(httpserver), 'bitbucket', 'fake_token')
+
+    assert 0 == len(bitbucket.get_branches('MyOrg',
+                                           'spring-ai-examples'))
+    assert 0 == len(bitbucket.get_tags('MyOrg',
+                                       'spring-ai-examples'))

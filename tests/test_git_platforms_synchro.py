@@ -151,7 +151,7 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
         except GitCommandError:
-            assert 'Repository does not exist on "to" plaform, will be created as mirror.' in caplog.text
+            assert 'Repository does not exist on "to" plaform, create as mirror...' in caplog.text
             assert 'Reusing existing cloned repo ' + \
                 get_url_root(httpserver) + \
                 '/spring-projects/spring-petclinic.git' in caplog.text
@@ -180,7 +180,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
             git_platforms_synchro.main()
             fail('Expected GitCommandError')
         except GitCommandError:
-            assert 'Repository has no branches on "to" platform, will be mirrored.' in caplog.text
+            assert 'Repository has no branches on "to" platform, synchronize as mirror...' in caplog.text
             assert 'Reusing existing cloned repo ' + \
                 get_url_root(httpserver) + \
                 '/spring-projects/spring-petclinic.git' in caplog.text
