@@ -1,4 +1,5 @@
+# Please duplicate in tests/requirements.txt
+gitpython
 atlassian-python-api
 py-gitea
 PyGithub
-gitpython

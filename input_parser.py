@@ -28,7 +28,7 @@ def parse():
     parser.add_argument('--from-password',
                         help='Git "from" password.')
     parser.add_argument('--from-org',
-                        help='Git "from" organization (or project).', required=True)
+                        help='Git "from" organization/user/project.', required=True)
     parser.add_argument('--from-type',
                         help='Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--from-proxy',
@@ -42,7 +42,7 @@ def parse():
     parser.add_argument('--to-password',
                         help='Git "to" password.')
     parser.add_argument('--to-org',
-                        help='Git "to" organization (or project).', required=True)
+                        help='Git "to" organization/user/project.', required=True)
     parser.add_argument(
         '--to-type', help='Git "to" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--to-proxy',

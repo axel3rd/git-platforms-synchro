@@ -3,8 +3,8 @@ pytest
 pytest-cov
 pytest_httpserver
 
-# Repeat of the main requirements, avoiding two "pip install" commands when tests used
+# Repeat of the main requirements, avoiding two "pip install" commands when tests executed
+gitpython
 atlassian-python-api
 py-gitea
 PyGithub
-gitpython

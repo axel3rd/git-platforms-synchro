@@ -4,12 +4,7 @@
 
 Synchronize branches of repositories from a Git paltform to another (with rebase, merge unsupported).
 
-## Preamble
-
 **Experimental** status.
-
-Currently not implemented:
-- Bitbucket
 
 ## Usage
 
@@ -34,9 +29,10 @@ python3 git_platforms_synchro.py \
 ## Options
 
 ```
-usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY] [--from-disable-ssl-verify]
-                                --to-url TO_URL --to-login TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--to-disable-ssl-verify] [--repos-include REPOS_INCLUDE]
-                                [--repos-exclude REPOS_EXCLUDE] [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
+usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY]
+                                [--from-disable-ssl-verify] --to-url TO_URL --to-login TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY]
+                                [--to-disable-ssl-verify] [--to-description-prefix TO_DESCRIPTION_PREFIX] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE]
+                                [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
 
 Git Platforms Synchronization
 
@@ -47,7 +43,7 @@ options:
                         Git "from" login or token.
   --from-password FROM_PASSWORD
                         Git "from" password.
-  --from-org FROM_ORG   Git "from" organization (or project).
+  --from-org FROM_ORG   Git "from" organization/user/project.
   --from-type FROM_TYPE
                         Git "from" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
@@ -58,11 +54,13 @@ options:
   --to-login TO_LOGIN   Git "to" login or token (Required).
   --to-password TO_PASSWORD
                         Git "to" password.
-  --to-org TO_ORG       Git "to" organization (or project).
+  --to-org TO_ORG       Git "to" organization/user/project.
   --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, GitHub, ... ; To use when cannot be detected from URL).
   --to-proxy TO_PROXY   Git "to" proxy (with credentials if needed).
   --to-disable-ssl-verify
                         Git "to" disable SSL verification.
+  --to-description-prefix TO_DESCRIPTION_PREFIX
+                        Description prefix for Git "to" repositories creation.
   --repos-include REPOS_INCLUDE
                         Repositories names patterns to include (comma separated).
   --repos-exclude REPOS_EXCLUDE
@@ -76,7 +74,27 @@ options:
                         Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 ```                        
 
-## Development utilities
+## Development
+
+### Unit tests
+
+Dependencies installation (once): 
+
+```
+pip install -r tests/requirements.txt
+```
+
+Execution:
+
+```
+pytest
+
+# Or with coverage
+coverage run -m pytest
+coverage xml
+```
+
+### Utilities
 
 To instantiate a Gitea accessible on `http://my.gitea.local:3000` via proxy (login/password= `evil/live`, port `8000`) or natively on `http://localhost:3000`, use this `compose.yaml` runnable via `docker compose up`:
 
