@@ -4,7 +4,7 @@ import git_platforms_synchro
 from pytest import LogCaptureFixture, fail
 from pytest_httpserver import HTTPServer
 from git import GitCommandError
-from tests.test_utils import get_url_root
+from tests.test_utils import get_url_root, mock_cloned_repo
 
 
 def test_cloned_reuse(caplog: LogCaptureFixture):
@@ -143,3 +143,18 @@ def test_mirror_bad_from_repo(httpserver: HTTPServer, caplog: LogCaptureFixture)
         assert 'Cloning repo ' + clone_url in caplog.text
         assert '"GET /spring-projects/spring-petclinic-other.git/info/refs?service=git-upload-pack HTTP/1.1" 542 -' in caplog.text
         assert 'The requested URL returned error: 542' in caplog.text
+
+
+def test_clone_proxy_disable_ssl(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    shutil.rmtree(git_platforms_synchro.TMP_REPO_GIT_DIRECTORY,
+                  ignore_errors=True)
+
+    clone_url = get_url_root(httpserver) + \
+        '/spring-projects/spring-petclinic.git'
+    proxy_port = str(httpserver.port + 1)
+    try:
+        git_platforms_synchro.git_clone(
+            clone_url, disable_ssl_verify=True, proxy='http://localhost:' + proxy_port)
+    except GitCommandError:
+        assert 'Cloning repo ' + clone_url in caplog.text
+        assert 'Failed to connect to localhost port ' + proxy_port in caplog.text
