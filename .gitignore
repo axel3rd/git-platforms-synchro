@@ -3,8 +3,9 @@
 /.sonarlint/
 /.coverage
 
-# Byte-compiled / optimized / DLL files
+# Environment Byte-compiled / optimized / DLL files
 /**/__pycache__/**
+/.venv/
 
 # Temporary or testing files
 /tmp-git-repo/
