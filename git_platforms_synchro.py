@@ -2,9 +2,9 @@ import os
 import sys
 import shutil
 import logging
-import input_parser
+import modules.input_parser as input_parser
 from git import Repo
-from git_clients import GitClientFactory, GitClient
+from modules.git_clients import GitClientFactory, GitClient
 
 TMP_REPO_GIT_DIRECTORY = 'tmp-git-repo/'
 GIT_CONFIG_HTTP_PREFIX = 'http'

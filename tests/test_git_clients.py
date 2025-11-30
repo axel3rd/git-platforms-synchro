@@ -1,6 +1,6 @@
 from pytest_httpserver import HTTPServer
 from pytest import LogCaptureFixture
-from git_clients import GitClientFactory
+from modules.git_clients import GitClientFactory
 from tests.test_utils import get_url_root, expect_request
 
 
