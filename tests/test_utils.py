@@ -1,7 +1,6 @@
 import json
 import shutil
 import tarfile
-
 from git import Repo
 from git_platforms_synchro import TMP_REPO_GIT_DIRECTORY
 from pytest_httpserver import HTTPServer

@@ -1,5 +1,5 @@
-from abc import ABC
 import re
+from abc import ABC
 from github import Github, Auth, GithubException
 from gitea import Gitea, Organization, User, Repository, NotFoundException
 from atlassian import Bitbucket

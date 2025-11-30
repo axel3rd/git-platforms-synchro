@@ -1,5 +1,5 @@
 import sys
-import input_parser
+import modules.input_parser as input_parser
 from unittest.mock import patch
 from pytest import LogCaptureFixture
 
