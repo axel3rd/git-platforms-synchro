@@ -71,7 +71,7 @@ def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str,  proxy_fr
         url=clone_url_from, mirror=True, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     configure_remote_to(repo_from_cloned, clone_url_to,
                         proxy_to, not disable_ssl_verify_to)
-    repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True)
+    repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True).raise_if_error()
 
 
 def repo_tags_sync(args, clone_url_from: str, git_from: GitClient, git_to: GitClient, repo: str, branches_updated: int) -> bool:
@@ -90,13 +90,13 @@ def repo_tags_sync(args, clone_url_from: str, git_from: GitClient, git_to: GitCl
     clone_url_to = git_to.get_repo_clone_url(args.to_org, repo)
     configure_remote_to(repo_from_cloned, clone_url_to,
                         args.to_proxy, not args.to_disable_ssl_verify)
-    repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True)
+    repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True).raise_if_error()
     return True
 
 
 def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,  git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, branch: str):
     if dry_run:
-        logger.info('  Dry-run mode, skipping branch synchronization.')
+        logger.info('    Dry-run mode, skipping branch synchronization.')
         return
     repo_from_cloned = git_clone(
         url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
@@ -104,7 +104,7 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disabl
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to,
                         proxy_to, not disable_ssl_verify_to)
-    repo_from_cloned.remote(GIT_REMOTE_TO).push()
+    repo_from_cloned.remote(GIT_REMOTE_TO).push().raise_if_error()
 
 
 def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: dict, clone_url_from: str, repo: str, git_to: GitClient) -> tuple[int, int]:
