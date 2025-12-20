@@ -77,15 +77,19 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
-    # Declare empty page two before next first page result, infinite loop otherwise
+    expect_request(httpserver, 'gitea',
+                   '/api/v1/users/MyOrg/repos', query_string='page=1')
     httpserver.expect_request(
         '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/branches')
+                   '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-petclinic/branches',  query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/tags')
+                   '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
     httpserver.expect_request(
         '/api/v1/repos/MyOrg/non-existing-repo').respond_with_data(status=404)
 
@@ -136,6 +140,8 @@ def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFix
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-ai-examples-empty')
     httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-ai-examples-empty/branches').respond_with_data('[]')
+    httpserver.expect_request(
         '/api/v1/repos/MyOrg/spring-ai-examples-empty/tags').respond_with_data('[]')
 
     gitea = GitClientFactory.create_client(
@@ -145,6 +151,62 @@ def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFix
                                        'spring-ai-examples-empty'))
     assert 0 == len(gitea.get_tags('MyOrg',
                                    'spring-ai-examples-empty'))
+
+
+def test_gitea_pagination_repos(httpserver: HTTPServer):
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrgMany')
+    for i in range(1, 4):
+        expect_request(httpserver, 'gitea', '/api/v1/users/MyOrgMany/repos',
+                       query_string=f'page={i}', file_suffix=f'.{i}')
+    httpserver.expect_request(
+        '/api/v1/users/MyOrgMany/repos',  query_string='page=4').respond_with_json([])
+
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
+
+    repos = gitea.get_repos('MyOrgMany')
+    assert 62 == len(repos)
+    assert 'repo-0' in repos
+    assert 'repo-1' in repos
+    assert 'repo-42' in repos
+    assert 'repo-60' in repos
+    assert 'repo-61' in repos
+
+
+def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/many')
+
+    for i in range(1, 4):
+        expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/many/branches',
+                       query_string=f'page={i}', file_suffix=f'.{i}')
+        expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/many/tags',
+                       query_string=f'page={i}', file_suffix=f'.{i}')
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/many/branches',  query_string='page=4').respond_with_json([])
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/many/tags',  query_string='page=4').respond_with_json([])
+
+    gitea = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitea', 'foo', 'bar')
+
+    branches = gitea.get_branches('MyOrg', 'many')
+    assert 65 == len(branches)
+    assert 'branch-1766187828' in branches
+    assert 'branch-1766187943' in branches
+    assert 'branch-1766188006' in branches
+    assert 'branch-1766188063' in branches
+
+    tags = gitea.get_tags('MyOrg', 'many')
+    assert 64 == len(tags)
+    assert 'v1.1766187743' in tags
+    assert 'v1.1766187923' in tags
+    assert 'v1.1766187939' in tags
+    assert 'v1.1766187950' in tags
+    assert 'v1.1766188010' in tags
+    assert 'v1.1766188040' in tags
+    assert 'v1.1766188055' in tags
+    assert 'v1.1766188064' in tags
 
 
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):

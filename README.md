@@ -99,10 +99,11 @@ coverage xml
 To instantiate a Gitea accessible on `http://my.gitea.local:3000` via proxy (login/password= `evil/live`, port `8000`) or natively on `http://localhost:3000`, use this `compose.yaml` runnable via `docker compose up`:
 
 ```
+# Before run, create directories: mkdir config data
 services:
   # Gitea platform
   my.gitea.local:
-    image: docker.io/gitea/gitea:latest-rootless
+    image: gitea/gitea:latest-rootless
     environment:
       GITEA__server__ROOT_URL: http://my.gitea.local:3000
       # GITEA__server__ROOT_URL: http://localhost:3000
