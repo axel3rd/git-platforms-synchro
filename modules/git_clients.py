@@ -158,17 +158,18 @@ class GiteaClient(GitClient):
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        r = Repository.request(self.gitea, org, repo)
-        if r.empty:
-            return branches_commits
-        for branch in r.get_branches():
-            branches_commits[branch.name] = branch.commit["id"]
+        # 'Repository.request(self.gitea, org, repo).get_branches()' currently does not support pagination
+        results = self.gitea.requests_get_paginated(
+            '/repos/%s/%s/branches' % (org, repo))
+        for result in results:
+            branches_commits[result['name']] = result['commit']['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = self.gitea.requests_get('/repos/%s/%s/tags' % (org, repo))
+        results = self.gitea.requests_get_paginated(
+            '/repos/%s/%s/tags' % (org, repo))
         for result in results:
             tags_commits[result['name']] = result['id']
         return tags_commits

@@ -29,8 +29,8 @@ def mock_cloned_repo(httpserver: HTTPServer, bare: bool = False):
         get_url_root(httpserver) + '/spring-projects/spring-petclinic.git')
 
 
-def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: str = None, str_replacement: str = None):
-    with open('tests/http_mocks/' + type + uri + '.json') as f:
+def expect_request(httpserver: HTTPServer, type: str, uri: str, query_string: str = None, str_to_replace: str = None, str_replacement: str = None, file_suffix: str = ''):
+    with open('tests/http_mocks/' + type + uri + file_suffix + '.json') as f:
         content = f.read()
     if type == 'github':
         content = content.replace(
@@ -44,4 +44,5 @@ def expect_request(httpserver: HTTPServer, type: str, uri: str, str_to_replace: 
             'http://localhost:7990', get_url_root(httpserver))
     if str_to_replace and str_replacement:
         content = content.replace(str_to_replace, str_replacement)
-    httpserver.expect_request(uri).respond_with_json(json.loads(content))
+    httpserver.expect_request(
+        uri, query_string=query_string).respond_with_json(json.loads(content))
