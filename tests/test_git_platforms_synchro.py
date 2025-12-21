@@ -97,20 +97,7 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
 
 
 def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/users/MyOrg/repos', query_string='page=1')
-    httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
-    httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/branches',  query_string='page=2').respond_with_json([])
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
-    httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
+    prepare_gitea_with_spring_projects(httpserver)
 
     testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'Gitea', '--from-login', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
