@@ -2,13 +2,18 @@
 
 # Git Platforms Synchronization
 
-Synchronize branches of repositories from a Git paltform to another (with rebase, merge unsupported).
+Synchronize branches of repositories from a Git platform to another (with rebase, merge unsupported).
+
+Supported platforms:
+- GitHub
+- Gitea
+- Bitbucket
 
 **Experimental** status.
 
 ## Usage
 
-Dependencies installation (once): 
+### Dependencies installation (once)
 
 ```
 python -m venv .venv
@@ -16,7 +21,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Execution program:
+For more fined dependencies installed, you could use one or multiple pip install with:
+- `requirements-github.txt`
+- `requirements-gitea.txt`
+- `requirements-bitbucket.txt`
+
+### Execution program
 
 ```
 python3 git_platforms_synchro.py \
