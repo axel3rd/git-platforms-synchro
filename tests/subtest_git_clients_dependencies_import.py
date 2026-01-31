@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 # This test mock 'sys.modules' which is shared between all tests
 # So if executed alone, it work, but not in all tests suite
-# So complete isolation for each test with a new context
+# So complete isolation for each test with a process via tests/test_git_clients_dependencies_import.py execution
 
 STR_SYS_MODULES = 'sys.modules'
 STR_LOCALHOST = 'http://localhost'
