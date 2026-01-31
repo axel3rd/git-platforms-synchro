@@ -61,7 +61,7 @@ class GitClient(ABC):
         # Should return the clone URL of the repository
         pass
 
-    def create_repo(self, org: str, repo: str):
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         # Should create a repository in the platform
         pass
 

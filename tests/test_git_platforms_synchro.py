@@ -8,7 +8,7 @@ from pytest import LogCaptureFixture, raises
 from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
 
 
-def test_args_github_to_gitea(httpserver: HTTPServer):
+def get_test_args_github_to_gitea(httpserver: HTTPServer):
     testargs = ['prog', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'foo', '--from-password', 'bar',
                 '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
     return testargs
@@ -114,7 +114,7 @@ def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
         '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
     prepare_gitea_with_spring_projects(httpserver)
 
-    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
         git_platforms_synchro.main()
 
     assert 'Repository has no branches on "from" platform, skipping.' in caplog.text
@@ -140,7 +140,7 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
     with raises(GitCommandError):
-        with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
     assert 'Repository does not exist on "to" plaform, create as mirror...' in caplog.text
@@ -170,7 +170,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
 
     with raises(GitCommandError):
-        with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
     assert 'Repository has no branches on "to" platform, synchronize as mirror...' in caplog.text
     assert 'Reusing existing cloned repo ' + \
@@ -192,7 +192,7 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     prepare_gitea_with_spring_projects(httpserver, update_commit=True)
 
     with raises(GitCommandError):
-        with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + \
@@ -217,7 +217,7 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
         '/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
     with raises(GitCommandError):
-        with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + \
@@ -234,7 +234,7 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     # Gitea with same repo
     prepare_gitea_with_spring_projects(httpserver)
 
-    with patch.object(sys, 'argv', test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
