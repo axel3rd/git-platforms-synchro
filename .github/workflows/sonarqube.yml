@@ -23,7 +23,8 @@ jobs:
           pip install -r tests/requirements.txt
       - name: Test with pytest
         run: |
-          coverage run -m pytest
+          coverage run --concurrency=thread --parallel-mode -m pytest
+          coverage combine
           coverage xml
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
