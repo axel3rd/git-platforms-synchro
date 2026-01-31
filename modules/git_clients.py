@@ -1,8 +1,20 @@
 import re
 from abc import ABC
-from github import Github, Auth, GithubException
-from gitea import Gitea, Organization, User, Repository, NotFoundException
-from atlassian import Bitbucket
+try:
+    from github import Github, Auth, GithubException
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
+try:
+    from gitea import Gitea, Organization, User, Repository, NotFoundException
+    GITEA_AVAILABLE = True
+except ImportError:
+    GITEA_AVAILABLE = False
+try:
+    from atlassian import Bitbucket
+    BITBUCKET_AVAILABLE = True
+except ImportError:
+    BITBUCKET_AVAILABLE = False
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
@@ -239,12 +251,12 @@ class BitbucketClient(GitClient):
 class GitClientFactory:
     @staticmethod
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
-        if 'github'.casefold() == type.casefold() or 'github' in url:
+        if GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
             return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
-        elif 'gitea'.casefold() == type.casefold() or 'gitea' in url:
+        elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
-        elif 'bitbucket'.casefold() == type.casefold() or 'bitbucket' in url:
+        elif BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
             return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
-                f'Type "{type}" not supported or not detected from URL "{url}".')
+                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - GitHub (PyGithub): {GITHUB_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}.')
