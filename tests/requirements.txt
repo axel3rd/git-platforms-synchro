@@ -1,6 +1,7 @@
 # Dedicated test dependencies
 pytest
 pytest-cov
+pytest-mock
 pytest_httpserver
 
 # Repeat of the main requirements, avoiding two "pip install" commands when tests executed
