@@ -21,10 +21,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For more fined dependencies installed, you could use one or multiple pip install with:
-- `requirements-github.txt`
-- `requirements-gitea.txt`
-- `requirements-bitbucket.txt`
+For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[github|gitea|bitbucket].txt`
 
 ### Execution program
 
@@ -94,14 +91,14 @@ Dependencies installation (once):
 pip install -r tests/requirements.txt
 ```
 
-Execution:
+Execution (with code coverage support for some subprocessed tests):
 
 ```
 pytest
 
-# Or with coverage
-coverage run -m pytest
-coverage xml
+# Or with code coverage
+coverage run --concurrency=thread --parallel-mode -m pytest
+coverage html
 ```
 
 ### Utilities

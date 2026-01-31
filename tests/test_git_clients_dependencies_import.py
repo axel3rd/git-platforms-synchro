@@ -1,7 +1,17 @@
-import subprocess
-import sys
+import sys, subprocess
+
 
 # File should be completly isolated, so dedicated process (works only from Python 3.11 & Pytest)
-def test_sub():
-    test_file = "tests/subtest_git_clients_dependencies_import.py"
-    subprocess.run([sys.executable, "-m", "pytest", test_file], check=True)
+# GLobal code coverage should be executed with same options: --concurrency=thread --parallel-mode 
+
+def exec_test_method(test_file: str, test_method: str):
+    subprocess.run([sys.executable, '-m', 'coverage', 'run', '--concurrency=thread','--parallel-mode', '-m','pytest', test_file.replace('tests/', 'tests/sub') + '::'  + test_method], check=True)
+
+def test_no_github(request):
+    exec_test_method(request.module.__file__, request.node.name)
+
+def test_no_gitea(request):
+    exec_test_method(request.module.__file__, request.node.name)
+
+def test_no_bitbucket(request):
+    exec_test_method(request.module.__file__, request.node.name)    
