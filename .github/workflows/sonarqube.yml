@@ -24,6 +24,7 @@ jobs:
       - name: Test with pytest
         run: |
           coverage run --concurrency=thread --parallel-mode -m pytest
+          coverage combine
           coverage xml
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
