@@ -1,7 +1,14 @@
+import re
 from pytest_httpserver import HTTPServer
-from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture, raises
 from modules.git_clients import GitClientFactory
 from tests.test_utils import get_url_root, expect_request
+from requests import exceptions
+
+
+def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    with raises(NotImplementedError, match=re.escape("Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.")):
+        GitClientFactory.create_client("https://fake.url.dev", 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
 
 
 def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -73,6 +80,15 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
                                         'spring-petclinic'))
     assert 0 == len(github.get_tags('spring-projects',
                                     'spring-petclinic'))
+
+
+def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    gitea = GitClientFactory.create_client("https://fake.url.dev", 'gitea', 'foo', 'bar', proxy=get_url_root(httpserver))
+
+    with raises(exceptions.ProxyError):
+        gitea.get_repos('Fake')
+
+    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -209,6 +225,16 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
     assert 'v1.1766188064' in tags
 
 
+def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    bitbucket = GitClientFactory.create_client(
+        'https://fake.url.dev', 'bitbucket', 'fake_token', proxy=get_url_root(httpserver))
+
+    with raises(exceptions.ProxyError):
+        bitbucket.get_repos('Fake')
+
+    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
+
+
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'bitbucket',
                    '/rest/api/1.0/projects/MyOrg/repos')
@@ -269,6 +295,16 @@ def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptur
                                            'spring-ai-examples'))
     assert 0 == len(bitbucket.get_tags('MyOrg',
                                        'spring-ai-examples'))
+
+
+def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    gitlab = GitClientFactory.create_client(
+        'https://fake.url.dev', 'gitlab', 'fake_token', proxy=get_url_root(httpserver))
+
+    with raises(exceptions.ProxyError):
+        gitlab.get_repos('Fake')
+
+    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
 
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):

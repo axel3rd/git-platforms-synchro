@@ -59,7 +59,8 @@ def configure_remote_to(repo: Repo, clone_url_to: str, proxy: str = '', ssl_veri
                                    '"', 'postBuffer', '524288000').release()
 
 
-def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str,  proxy_from: str, disable_ssl_verify_from: bool, git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, description: str = ''):
+def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,
+                git_to: GitClient, proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info(
             '  Dry-run mode, skipping repository creation and mirroring.')
@@ -94,7 +95,8 @@ def repo_tags_sync(args, clone_url_from: str, git_from: GitClient, git_to: GitCl
     return True
 
 
-def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,  git_to: GitClient,  proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, branch: str):
+def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,
+                     git_to: GitClient, proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, branch: str):
     if dry_run:
         logger.info('    Dry-run mode, skipping branch synchronization.')
         return
@@ -107,7 +109,8 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disabl
     repo_from_cloned.remote(GIT_REMOTE_TO).push().raise_if_error()
 
 
-def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: dict, clone_url_from: str, repo: str, git_to: GitClient) -> tuple[int, int]:
+def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: dict,
+                       clone_url_from: str, repo: str, git_to: GitClient) -> tuple[int, int]:
     """
     Main branches process sync
 

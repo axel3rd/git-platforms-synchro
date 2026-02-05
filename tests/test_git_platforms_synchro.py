@@ -33,7 +33,7 @@ def prepare_gitea_with_spring_projects(httpserver: HTTPServer, prepare_branches:
     expect_request(httpserver, 'gitea',
                    '/api/v1/users/MyOrg/repos', query_string='page=1')
     httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+        '/api/v1/users/MyOrg/repos', query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     if prepare_branches:
         if update_commit:
@@ -43,12 +43,12 @@ def prepare_gitea_with_spring_projects(httpserver: HTTPServer, prepare_branches:
             expect_request(httpserver, 'gitea',
                            '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
         httpserver.expect_request(
-            '/api/v1/repos/MyOrg/spring-petclinic/branches',  query_string='page=2').respond_with_json([])
+            '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=2').respond_with_json([])
     if prepare_tags:
         expect_request(httpserver, 'gitea',
                        '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
         httpserver.expect_request(
-            '/api/v1/repos/MyOrg/spring-petclinic/tags',  query_string='page=2').respond_with_json([])
+            '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
@@ -134,7 +134,9 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
     # Newly created repo at second call
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
 
-    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone
+    # as already existing bare directory (reuse mechanism) and mock the git
+    # push failure
     mock_cloned_repo(httpserver, bare=True)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
@@ -162,9 +164,11 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
                    str_to_replace='"empty": false,', str_replacement='"empty": true,')
     httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/branches',  query_string='page=1').respond_with_json([])
+        '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1').respond_with_json([])
 
-    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone
+    # as already existing bare directory (reuse mechanism) and mock the git
+    # push failure
     mock_cloned_repo(httpserver, bare=True)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
@@ -180,7 +184,9 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
 
 
 def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone
+    # as already existing bare directory (reuse mechanism) and mock the git
+    # push failure
     mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
@@ -203,7 +209,9 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
 
 
 def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    # httpserver doesn't support KeepAlive, so we need to mock the git clone as already existing bare directory (reuse mechanism) and mock the git push failure
+    # httpserver doesn't support KeepAlive, so we need to mock the git clone
+    # as already existing bare directory (reuse mechanism) and mock the git
+    # push failure
     mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
         '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)

@@ -14,7 +14,7 @@ try:
     from gitlab import Gitlab
     GITLAB_AVAILABLE = True
 except ImportError:
-    GITLAB_AVAILABLE = False  
+    GITLAB_AVAILABLE = False
 try:
     from github import Github, Auth, GithubException
     GITHUB_AVAILABLE = True
@@ -70,6 +70,7 @@ class GitClient(ABC):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         # Should create a repository in the platform
         pass
+
 
 class BitbucketClient(GitClient):
 
@@ -182,6 +183,7 @@ class GiteaClient(GitClient):
             User.request(self.gitea, org).create_repo(
                 repoName=repo, description=description, autoInit=False)
 
+
 class GitLabClient(GitClient):
 
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
@@ -241,6 +243,77 @@ class GitLabClient(GitClient):
             else:
                 raise e
 
+
+class GitHubClient(GitClient):
+
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        if proxy is not None:
+            raise NotImplementedError(
+                'Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')
+        self.url = url
+        auth = None
+        if login_or_token is not None:
+            if re.match(r'^gh._\w+$', login_or_token):
+                auth = Auth.Token(login_or_token)
+            elif password is not None:
+                auth = Auth.Login(login_or_token, password)
+        self.github = Github(base_url=url, auth=auth, verify=ssl_verify)
+
+    def get_url(self) -> str:
+        return self.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in self.github.get_user(org).get_repos():
+            repos.append(repo.name)
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        try:
+            return self.github.get_user(org).get_repo(repo) is not None
+        except GithubException as e:
+            if e.status == 404:
+                return False
+            raise e
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.github.get_user(org).get_repo(repo).description
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.github.get_user(org).get_repo(repo).clone_url
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        for branch in self.github.get_user(org).get_repo(repo).get_branches():
+            branches_commits[branch.name] = branch.commit.sha
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.github.get_user(org).get_repo(repo).get_tags():
+            tags_commits[tag.name] = tag.commit.sha
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        try:
+            self.github.get_organization(org).create_repo(
+                name=repo, description=description, auto_init=False)
+        except GithubException as e:
+            if e.status == 404:
+                # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
+                self.github.get_user().create_repo(
+                    name=repo, description=description, auto_init=False)
+            else:
+                raise e
+
+
 class GitClientFactory:
     @staticmethod
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
@@ -251,7 +324,7 @@ class GitClientFactory:
         elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
             return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
         elif GITLAB_AVAILABLE and ('gitlab'.casefold() == type.casefold() or 'gitlab' in url):
-            return GitLabClient(url, login_or_token, password, ssl_verify, proxy)        
+            return GitLabClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
                 f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')

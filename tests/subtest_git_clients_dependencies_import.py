@@ -1,4 +1,5 @@
-import re, sys
+import re
+import sys
 from pytest import raises, fixture
 from contextlib import contextmanager
 
@@ -16,17 +17,20 @@ def test_no_bitbucket(mocker):
         from modules.git_clients import GitClientFactory
         GitClientFactory.create_client(STR_LOCALHOST, 'bitbucket')
 
+
 def test_no_gitea(mocker):
     mocker.patch.dict(STR_SYS_MODULES, {'gitea': None})
     with raises(ValueError, match=re.escape('Type "gitea" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gitea (py-gitea): False, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
         from modules.git_clients import GitClientFactory
         GitClientFactory.create_client(STR_LOCALHOST, 'gitea')
 
+
 def test_no_gitlab(mocker):
     mocker.patch.dict(STR_SYS_MODULES, {'gitlab': None})
     with raises(ValueError, match=re.escape('Type "gitlab" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): False, GitHub (PyGithub): True.')):
         from modules.git_clients import GitClientFactory
         GitClientFactory.create_client(STR_LOCALHOST, 'gitlab')
+
 
 def test_no_github(mocker):
     mocker.patch.dict(STR_SYS_MODULES, {'github': None})
