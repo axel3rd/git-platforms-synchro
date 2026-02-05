@@ -9,20 +9,27 @@ from contextlib import contextmanager
 STR_SYS_MODULES = 'sys.modules'
 STR_LOCALHOST = 'http://localhost'
 
-def test_no_github(mocker):
-    mocker.patch.dict(STR_SYS_MODULES, {'github': None})
-    with raises(ValueError, match=re.escape('Type "github" not supported or not detected from URL "http://localhost". Or python client dependency not installed - GitHub (PyGithub): False, Gitea (py-gitea): True, Bitbucket (atlassian-python-api): True')):
-        from modules.git_clients import GitClientFactory
-        GitClientFactory.create_client(STR_LOCALHOST, 'github')
-
-def test_no_gitea(mocker):
-    mocker.patch.dict(STR_SYS_MODULES, {'gitea': None})
-    with raises(ValueError, match=re.escape('Type "gitea" not supported or not detected from URL "http://localhost". Or python client dependency not installed - GitHub (PyGithub): True, Gitea (py-gitea): False, Bitbucket (atlassian-python-api): True')):
-        from modules.git_clients import GitClientFactory
-        GitClientFactory.create_client(STR_LOCALHOST, 'gitea')
 
 def test_no_bitbucket(mocker):
     mocker.patch.dict(STR_SYS_MODULES, {'atlassian': None})
-    with raises(ValueError, match=re.escape('Type "bitbucket" not supported or not detected from URL "http://localhost". Or python client dependency not installed - GitHub (PyGithub): True, Gitea (py-gitea): True, Bitbucket (atlassian-python-api): False')):
+    with raises(ValueError, match=re.escape('Type "bitbucket" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): False, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
         from modules.git_clients import GitClientFactory
-        GitClientFactory.create_client(STR_LOCALHOST, 'bitbucket')     
+        GitClientFactory.create_client(STR_LOCALHOST, 'bitbucket')
+
+def test_no_gitea(mocker):
+    mocker.patch.dict(STR_SYS_MODULES, {'gitea': None})
+    with raises(ValueError, match=re.escape('Type "gitea" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gitea (py-gitea): False, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+        from modules.git_clients import GitClientFactory
+        GitClientFactory.create_client(STR_LOCALHOST, 'gitea')
+
+def test_no_gitlab(mocker):
+    mocker.patch.dict(STR_SYS_MODULES, {'gitlab': None})
+    with raises(ValueError, match=re.escape('Type "gitlab" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): False, GitHub (PyGithub): True.')):
+        from modules.git_clients import GitClientFactory
+        GitClientFactory.create_client(STR_LOCALHOST, 'gitlab')
+
+def test_no_github(mocker):
+    mocker.patch.dict(STR_SYS_MODULES, {'github': None})
+    with raises(ValueError, match=re.escape('Type "github" not supported or not detected from URL "http://localhost". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): False.')):
+        from modules.git_clients import GitClientFactory
+        GitClientFactory.create_client(STR_LOCALHOST, 'github')

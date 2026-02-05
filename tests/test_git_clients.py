@@ -80,12 +80,12 @@ def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'gitea',
                    '/api/v1/users/MyOrg/repos', query_string='page=1')
     httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos',  query_string='page=2').respond_with_json([])
+        '/api/v1/users/MyOrg/repos', query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
     httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/branches',  query_string='page=2').respond_with_json([])
+        '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea',
                    '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
     httpserver.expect_request(
@@ -159,7 +159,7 @@ def test_gitea_pagination_repos(httpserver: HTTPServer):
         expect_request(httpserver, 'gitea', '/api/v1/users/MyOrgMany/repos',
                        query_string=f'page={i}', file_suffix=f'.{i}')
     httpserver.expect_request(
-        '/api/v1/users/MyOrgMany/repos',  query_string='page=4').respond_with_json([])
+        '/api/v1/users/MyOrgMany/repos', query_string='page=4').respond_with_json([])
 
     gitea = GitClientFactory.create_client(
         get_url_root(httpserver), 'gitea', 'foo', 'bar')
@@ -183,9 +183,9 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
         expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/many/tags',
                        query_string=f'page={i}', file_suffix=f'.{i}')
     httpserver.expect_request(
-        '/api/v1/repos/MyOrg/many/branches',  query_string='page=4').respond_with_json([])
+        '/api/v1/repos/MyOrg/many/branches', query_string='page=4').respond_with_json([])
     httpserver.expect_request(
-        '/api/v1/repos/MyOrg/many/tags',  query_string='page=4').respond_with_json([])
+        '/api/v1/repos/MyOrg/many/tags', query_string='page=4').respond_with_json([])
 
     gitea = GitClientFactory.create_client(
         get_url_root(httpserver), 'gitea', 'foo', 'bar')
@@ -269,3 +269,57 @@ def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptur
                                            'spring-ai-examples'))
     assert 0 == len(bitbucket.get_tags('MyOrg',
                                        'spring-ai-examples'))
+
+
+def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+
+    expect_request(httpserver, 'gitlab', '/users/spring-projects')
+    expect_request(httpserver, 'gitlab', '/users/spring-projects/repos')
+    expect_request(httpserver, 'gitlab',
+                   '/repos/spring-projects/spring-petclinic')
+    expect_request(httpserver, 'gitlab',
+                   '/repos/spring-projects/spring-petclinic/branches')
+    expect_request(httpserver, 'gitlab',
+                   '/repos/spring-projects/spring-petclinic/tags')
+    httpserver.expect_request(
+        '/repos/spring-projects/non-existing-repo').respond_with_data(status=404)
+
+    gitlab = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab')
+
+    assert 30 == len(gitlab.get_repos('spring-projects'))
+    assert gitlab.has_repo('spring-projects', 'spring-petclinic')
+    assert not gitlab.has_repo('spring-projects', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' == gitlab.get_repo_clone_url(
+        'spring-projects', 'spring-petclinic')
+    assert 'A sample Spring-based application' == gitlab.get_repo_description(
+        'spring-projects', 'spring-petclinic')
+    assert 8 == len(gitlab.get_branches('spring-projects',
+                                        'spring-petclinic'))
+    assert 1 == len(gitlab.get_tags('spring-projects',
+                                    'spring-petclinic'))
+    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gitlab.get_tags('spring-projects',
+                                                                         'spring-petclinic')['1.5.x']
+
+
+def test_gitlab_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitlab', '/orgs/spring-projects')
+    httpserver.expect_oneshot_request(
+        '/orgs/spring-projects/repos', method='POST').respond_with_data(status=201)
+
+    github = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab', 'ghu_xxxx')
+
+    github.create_repo('spring-projects', 'new-repo')
+
+
+def test_gitlab_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_request(
+        '/orgs/spring-projects').respond_with_data(status=404)
+    httpserver.expect_oneshot_request(
+        '/user/repos', method='POST').respond_with_data(status=201)
+
+    github = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab', 'ghu_xxxx')
+
+    github.create_repo('spring-projects', 'new-repo')

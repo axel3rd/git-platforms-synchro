@@ -1,20 +1,26 @@
 import re
 from abc import ABC
 try:
-    from github import Github, Auth, GithubException
-    GITHUB_AVAILABLE = True
+    from atlassian import Bitbucket
+    BITBUCKET_AVAILABLE = True
 except ImportError:
-    GITHUB_AVAILABLE = False
+    BITBUCKET_AVAILABLE = False
 try:
     from gitea import Gitea, Organization, User, Repository, NotFoundException
     GITEA_AVAILABLE = True
 except ImportError:
     GITEA_AVAILABLE = False
 try:
-    from atlassian import Bitbucket
-    BITBUCKET_AVAILABLE = True
+    from gitlab import Gitlab
+    GITLAB_AVAILABLE = True
 except ImportError:
-    BITBUCKET_AVAILABLE = False
+    GITLAB_AVAILABLE = False  
+try:
+    from github import Github, Auth, GithubException
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
+
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
@@ -65,75 +71,56 @@ class GitClient(ABC):
         # Should create a repository in the platform
         pass
 
+class BitbucketClient(GitClient):
 
-class GitHubClient(GitClient):
-
-    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        if proxy is not None:
-            raise NotImplementedError(
-                'Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')
-        self.url = url
-        auth = None
-        if login_or_token is not None:
-            if re.match(r'^gh._\w+$', login_or_token):
-                auth = Auth.Token(login_or_token)
-            elif password is not None:
-                auth = Auth.Login(login_or_token, password)
-        self.github = Github(base_url=url, auth=auth, verify=ssl_verify)
+    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.bitbucket = Bitbucket(
+            url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
+        self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
 
     def get_url(self) -> str:
-        return self.url
+        return self.bitbucket.url
 
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in self.github.get_user(org).get_repos():
-            repos.append(repo.name)
+        for repo in self.bitbucket.repo_all_list(org):
+            repos.append(repo['slug'])
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
         check_inputs(org, repo)
-        try:
-            return self.github.get_user(org).get_repo(repo) is not None
-        except GithubException as e:
-            if e.status == 404:
-                return False
-            raise e
+        return self.bitbucket.repo_exists(org, repo)
 
     def get_repo_description(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.github.get_user(org).get_repo(repo).description
+        return self.bitbucket.get_repo(org, repo)['description']
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.github.get_user(org).get_repo(repo).clone_url
+        for link in self.bitbucket.get_repo(org, repo)['links']['clone']:
+            if 'http' == link['name']:
+                return link['href']
+        raise ValueError('Cannot not found http clone link')
 
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        for branch in self.github.get_user(org).get_repo(repo).get_branches():
-            branches_commits[branch.name] = branch.commit.sha
+        for branch in self.bitbucket.get_branches(org, repo, details=False):
+            branches_commits[branch['displayId']] = branch['latestCommit']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        for tag in self.github.get_user(org).get_repo(repo).get_tags():
-            tags_commits[tag.name] = tag.commit.sha
+        for tag in self.bitbucket.get_tags(org, repo, limit=0):
+            tags_commits[tag['displayId']] = tag['latestCommit']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
-        try:
-            self.github.get_organization(org).create_repo(
-                name=repo, description=description, auto_init=False)
-        except GithubException as e:
-            if e.status == 404:
-                # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
-                self.github.get_user().create_repo(
-                    name=repo, description=description, auto_init=False)
-            else:
-                raise e
+        self.bitbucket.create_repo(org, repo)
+        self.bitbucket.update_repo(org, repo, description=description)
 
 
 class GiteaClient(GitClient):
@@ -195,68 +182,76 @@ class GiteaClient(GitClient):
             User.request(self.gitea, org).create_repo(
                 repoName=repo, description=description, autoInit=False)
 
+class GitLabClient(GitClient):
 
-class BitbucketClient(GitClient):
-
-    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.bitbucket = Bitbucket(
-            url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
-        self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.gitlab = Gitlab('https://gitlab.com', private_token='ton_token_prive')
 
     def get_url(self) -> str:
-        return self.bitbucket.url
+        return self.url
 
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in self.bitbucket.repo_all_list(org):
-            repos.append(repo['slug'])
+        for repo in self.gitlab.get_user(org).get_repos():
+            repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
         check_inputs(org, repo)
-        return self.bitbucket.repo_exists(org, repo)
+        try:
+            return self.gitlab.get_user(org).get_repo(repo) is not None
+        except GithubException as e:
+            if e.status == 404:
+                return False
+            raise e
 
     def get_repo_description(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.bitbucket.get_repo(org, repo)['description']
+        return self.gitlab.get_user(org).get_repo(repo).description
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        for link in self.bitbucket.get_repo(org, repo)['links']['clone']:
-            if 'http' == link['name']:
-                return link['href']
-        raise ValueError('Cannot not found http clone link')
+        return self.gitlab.get_user(org).get_repo(repo).clone_url
 
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        for branch in self.bitbucket.get_branches(org, repo, details=False):
-            branches_commits[branch['displayId']] = branch['latestCommit']
+        for branch in self.gitlab.get_user(org).get_repo(repo).get_branches():
+            branches_commits[branch.name] = branch.commit.sha
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        for tag in self.bitbucket.get_tags(org, repo, limit=0):
-            tags_commits[tag['displayId']] = tag['latestCommit']
+        for tag in self.gitlab.get_user(org).get_repo(repo).get_tags():
+            tags_commits[tag.name] = tag.commit.sha
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
-        self.bitbucket.create_repo(org, repo)
-        self.bitbucket.update_repo(org, repo, description=description)
-
+        try:
+            self.gitlab.get_organization(org).create_repo(
+                name=repo, description=description, auto_init=False)
+        except GithubException as e:
+            if e.status == 404:
+                # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
+                self.gitlab.get_user().create_repo(
+                    name=repo, description=description, auto_init=False)
+            else:
+                raise e
 
 class GitClientFactory:
     @staticmethod
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
-        if GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
-            return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
+        if BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
+            return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
         elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
-        elif BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
-            return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
+        elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
+            return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
+        elif GITLAB_AVAILABLE and ('gitlab'.casefold() == type.casefold() or 'gitlab' in url):
+            return GitLabClient(url, login_or_token, password, ssl_verify, proxy)        
         else:
             raise ValueError(
-                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - GitHub (PyGithub): {GITHUB_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}.')
+                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')

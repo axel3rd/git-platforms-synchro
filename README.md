@@ -5,9 +5,10 @@
 Synchronize branches of repositories from a Git platform to another (with rebase, merge unsupported).
 
 Supported platforms:
-- GitHub
-- Gitea
 - Bitbucket
+- Gitea
+- GitHub
+- GitLab
 
 **Experimental** status.
 
@@ -21,7 +22,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[github|gitea|bitbucket].txt`
+For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[bitbucket|gitea|github|gitlab].txt`
 
 ### Execution program
 

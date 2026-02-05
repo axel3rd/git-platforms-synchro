@@ -7,11 +7,14 @@ import sys, subprocess
 def exec_test_method(test_file: str, test_method: str):
     subprocess.run([sys.executable, '-m', 'coverage', 'run', '--concurrency=thread','--parallel-mode', '-m','pytest', test_file.replace('tests/', 'tests/sub') + '::'  + test_method], check=True)
 
-def test_no_github(request):
+def test_no_bitbucket(request):
+    exec_test_method(request.module.__file__, request.node.name)   
+
+def test_no_gitlab(request):
     exec_test_method(request.module.__file__, request.node.name)
 
 def test_no_gitea(request):
     exec_test_method(request.module.__file__, request.node.name)
 
-def test_no_bitbucket(request):
-    exec_test_method(request.module.__file__, request.node.name)    
+def test_no_github(request):
+    exec_test_method(request.module.__file__, request.node.name)
