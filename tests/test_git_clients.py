@@ -309,30 +309,29 @@ def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
-    expect_request(httpserver, 'gitlab', '/users/spring-projects')
-    expect_request(httpserver, 'gitlab', '/users/spring-projects/repos')
-    expect_request(httpserver, 'gitlab',
-                   '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'gitlab',
-                   '/repos/spring-projects/spring-petclinic/branches')
-    expect_request(httpserver, 'gitlab',
-                   '/repos/spring-projects/spring-petclinic/tags')
+    expect_request(httpserver, 'gitlab', '/api/v4/users', 'username=axel3rd')
+    expect_request(httpserver, 'gitlab', '/api/v4/users/42/projects', 'include_subgroups=True')
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
+    # expect_request(httpserver, 'gitlab',
+    #                '/repos/spring-projects/spring-petclinic/branches')
+    # expect_request(httpserver, 'gitlab',
+    #                '/repos/spring-projects/spring-petclinic/tags')
     httpserver.expect_request(
-        '/repos/spring-projects/non-existing-repo').respond_with_data(status=404)
+        '/api/v4/projects/axel3rd/non-existing-repo').respond_with_data(status=404)
 
     gitlab = GitClientFactory.create_client(
-        get_url_root(httpserver), 'gitlab')
+        get_url_root(httpserver), 'gitlab', 'glpat-xxx')
 
-    assert 30 == len(gitlab.get_repos('spring-projects'))
-    assert gitlab.has_repo('spring-projects', 'spring-petclinic')
-    assert not gitlab.has_repo('spring-projects', 'non-existing-repo')
-    assert get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' == gitlab.get_repo_clone_url(
-        'spring-projects', 'spring-petclinic')
+    assert 2 == len(gitlab.get_repos('axel3rd'))
+    assert gitlab.has_repo('axel3rd', 'spring-petclinic')
+    assert not gitlab.has_repo('axel3rd', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/axel3rd/spring-petclinic.git' == gitlab.get_repo_clone_url(
+        'axel3rd', 'spring-petclinic')
     assert 'A sample Spring-based application' == gitlab.get_repo_description(
-        'spring-projects', 'spring-petclinic')
-    assert 8 == len(gitlab.get_branches('spring-projects',
+        'axel3rd', 'spring-petclinic')
+    assert 8 == len(gitlab.get_branches('axel3rd',
                                         'spring-petclinic'))
-    assert 1 == len(gitlab.get_tags('spring-projects',
+    assert 1 == len(gitlab.get_tags('axel3rd',
                                     'spring-petclinic'))
     assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gitlab.get_tags('spring-projects',
                                                                          'spring-petclinic')['1.5.x']
@@ -343,10 +342,10 @@ def test_gitlab_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
     httpserver.expect_oneshot_request(
         '/orgs/spring-projects/repos', method='POST').respond_with_data(status=201)
 
-    github = GitClientFactory.create_client(
-        get_url_root(httpserver), 'gitlab', 'ghu_xxxx')
+    gitlab = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab', 'glpat-xxx')
 
-    github.create_repo('spring-projects', 'new-repo')
+    gitlab.create_repo('spring-projects', 'new-repo')
 
 
 def test_gitlab_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -355,7 +354,25 @@ def test_gitlab_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtu
     httpserver.expect_oneshot_request(
         '/user/repos', method='POST').respond_with_data(status=201)
 
-    github = GitClientFactory.create_client(
-        get_url_root(httpserver), 'gitlab', 'ghu_xxxx')
+    gitlab = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab', 'glpat-xxx')
 
-    github.create_repo('spring-projects', 'new-repo')
+    gitlab.create_repo('spring-projects', 'new-repo')
+
+
+def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github',
+                   '/repos/spring-projects/spring-petclinic')
+    httpserver.expect_request(
+        '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
+    httpserver.expect_request(
+        '/repos/spring-projects/spring-petclinic/tags').respond_with_data('[]')
+
+    gitlab = GitClientFactory.create_client(
+        get_url_root(httpserver), 'gitlab', 'glpat-xxx')
+
+    assert 0 == len(gitlab.get_branches('spring-projects',
+                                        'spring-petclinic'))
+    assert 0 == len(gitlab.get_tags('spring-projects',
+                                    'spring-petclinic'))

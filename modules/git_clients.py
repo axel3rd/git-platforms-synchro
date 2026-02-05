@@ -11,7 +11,8 @@ try:
 except ImportError:
     GITEA_AVAILABLE = False
 try:
-    from gitlab import Gitlab
+    from gitlab import Gitlab, GitlabError
+    import requests
     GITLAB_AVAILABLE = True
 except ImportError:
     GITLAB_AVAILABLE = False
@@ -187,7 +188,28 @@ class GiteaClient(GitClient):
 class GitLabClient(GitClient):
 
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.gitlab = Gitlab('https://gitlab.com', private_token='ton_token_prive')
+        self.url = url
+        session = None
+        private_token = None
+        http_username = None
+        http_password = None
+        if login_or_token is not None:
+            if re.match(r'^glpat-\w+$', login_or_token):
+                private_token = login_or_token
+            elif password is not None:
+                http_username = login_or_token
+                http_password = password
+        if proxy is not None:
+            session = requests.Session()
+            session.proxies.update({'http': proxy, 'https': proxy})
+
+        self.gitlab = Gitlab(
+            self.url,
+            http_username=http_username,
+            http_password=http_password,
+            private_token=private_token,
+            ssl_verify=ssl_verify,
+            session=session)
 
     def get_url(self) -> str:
         return self.url
@@ -195,16 +217,16 @@ class GitLabClient(GitClient):
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in self.gitlab.get_user(org).get_repos():
+        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
             repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
         check_inputs(org, repo)
         try:
-            return self.gitlab.get_user(org).get_repo(repo) is not None
-        except GithubException as e:
-            if e.status == 404:
+            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
+        except GitlabError as e:
+            if e.response_code == 404:
                 return False
             raise e
 
