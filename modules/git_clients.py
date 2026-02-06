@@ -193,12 +193,11 @@ class GitLabClient(GitClient):
         private_token = None
         http_username = None
         http_password = None
-        if login_or_token is not None:
-            if re.match(r'^glpat-\w+$', login_or_token):
-                private_token = login_or_token
-            elif password is not None:
-                http_username = login_or_token
-                http_password = password
+        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
+            private_token = login_or_token
+        elif password is not None:
+            http_username = login_or_token
+            http_password = password
         if proxy is not None:
             session = requests.Session()
             session.proxies.update({'http': proxy, 'https': proxy})
@@ -232,38 +231,33 @@ class GitLabClient(GitClient):
 
     def get_repo_description(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.gitlab.get_user(org).get_repo(repo).description
+        return self.gitlab.projects.get(str(org + '/' + repo)).description
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return self.gitlab.get_user(org).get_repo(repo).clone_url
+        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
 
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        for branch in self.gitlab.get_user(org).get_repo(repo).get_branches():
-            branches_commits[branch.name] = branch.commit.sha
+        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
+            branches_commits[branch.name] = branch.commit['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        for tag in self.gitlab.get_user(org).get_repo(repo).get_tags():
-            tags_commits[tag.name] = tag.commit.sha
+        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
+            tags_commits[tag.name] = tag.commit['id']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
-        try:
-            self.gitlab.get_organization(org).create_repo(
-                name=repo, description=description, auto_init=False)
-        except GithubException as e:
-            if e.status == 404:
-                # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
-                self.gitlab.get_user().create_repo(
-                    name=repo, description=description, auto_init=False)
-            else:
-                raise e
+        self.gitlab.projects.create({
+            'name': repo,
+            'description': description,
+            'visibility': 'private'
+        })
 
 
 class GitHubClient(GitClient):

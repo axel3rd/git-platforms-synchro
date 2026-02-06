@@ -43,6 +43,9 @@ def expect_request(httpserver: HTTPServer, type: str, uri: str, query_string: st
     if type == 'bitbucket':
         content = content.replace(
             'http://localhost:7990', get_url_root(httpserver))
+    if type == 'gitlab':
+        content = content.replace(
+            'https://gitlab.com', get_url_root(httpserver))
     if str_to_replace and str_replacement:
         content = content.replace(str_to_replace, str_replacement)
     httpserver.expect_request(

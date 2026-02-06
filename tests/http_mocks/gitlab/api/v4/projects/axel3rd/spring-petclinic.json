@@ -1,6 +1,6 @@
 {
     "id": 78242723,
-    "description": null,
+    "description": "A sample Spring-based application",
     "name": "spring-petclinic",
     "name_with_namespace": "axel 3rd / spring-petclinic",
     "path": "spring-petclinic",

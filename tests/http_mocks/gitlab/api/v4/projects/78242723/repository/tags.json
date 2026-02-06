@@ -1,0 +1,29 @@
+[
+    {
+        "name": "1.5.x",
+        "message": "",
+        "target": "c36452a2c34443ae26b4ecbba4f149906af14717",
+        "commit": {
+            "id": "c36452a2c34443ae26b4ecbba4f149906af14717",
+            "short_id": "c36452a2",
+            "created_at": "2017-11-03T14:17:56.000+00:00",
+            "parent_ids": [
+                "e20b43b0090bc7a13de4b177ff02c3900f168a05"
+            ],
+            "title": "Use leading / in app URL",
+            "message": "Use leading / in app URL\n\nFixes gh-267\n",
+            "author_name": "Dave Syer",
+            "author_email": "dsyer@pivotal.io",
+            "authored_date": "2017-11-03T14:17:04.000+00:00",
+            "committer_name": "Dave Syer",
+            "committer_email": "dsyer@pivotal.io",
+            "committed_date": "2017-11-03T14:17:56.000+00:00",
+            "trailers": {},
+            "extended_trailers": {},
+            "web_url": "https://gitlab.com/axel3rd/spring-petclinic/-/commit/c36452a2c34443ae26b4ecbba4f149906af14717"
+        },
+        "release": null,
+        "protected": false,
+        "created_at": null
+    }
+]
