@@ -66,7 +66,7 @@ def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     with raises(exceptions.ProxyError):
         gitea.get_repos('Fake')
 
-    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
+    assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -179,7 +179,7 @@ def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     with raises(exceptions.ProxyError):
         bitbucket.get_repos('Fake')
 
-    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
+    assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
 
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -234,7 +234,7 @@ def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     with raises(exceptions.ProxyError):
         gitlab.get_repos('Fake')
 
-    assert 'CONNECT fake.url.dev:443 HTTP/1.1' in caplog.text
+    assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
