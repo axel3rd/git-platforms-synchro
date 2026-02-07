@@ -18,45 +18,52 @@ def prepare_github_with_spring_projects(httpserver: HTTPServer, prepare_branches
     # GitHub with spring-projects
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
-    expect_request(httpserver, 'github',
-                   '/repos/spring-projects/spring-petclinic')
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
     if prepare_branches:
-        expect_request(httpserver, 'github',
-                       '/repos/spring-projects/spring-petclinic/branches')
+        expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/branches')
     if prepare_tags:
-        expect_request(httpserver, 'github',
-                       '/repos/spring-projects/spring-petclinic/tags')
+        expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/tags')
 
 
 def prepare_gitea_with_spring_projects(httpserver: HTTPServer, prepare_branches: bool = True, prepare_tags: bool = True, update_commit: bool = False):
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
-    expect_request(httpserver, 'gitea',
-                   '/api/v1/users/MyOrg/repos', query_string='page=1')
-    httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos', query_string='page=2').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos', query_string='page=1')
+    httpserver.expect_request('/api/v1/users/MyOrg/repos', query_string='page=2').respond_with_json([])
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
     if prepare_branches:
         if update_commit:
-            expect_request(httpserver, 'gitea',
-                           '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1', str_to_replace='6148ddd9671ccab86a3f0ae2dfa77d833b713ee8', str_replacement='bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
+            expect_request(
+                httpserver,
+                'gitea',
+                '/api/v1/repos/MyOrg/spring-petclinic/branches',
+                query_string='page=1',
+                str_to_replace='6148ddd9671ccab86a3f0ae2dfa77d833b713ee8',
+                str_replacement='bbbbddd9671ccab86a3f0ae2dfa77d833b713ee8')
         else:
-            expect_request(httpserver, 'gitea',
-                           '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
-        httpserver.expect_request(
-            '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=2').respond_with_json([])
+            expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1')
+        httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=2').respond_with_json([])
     if prepare_tags:
-        expect_request(httpserver, 'gitea',
-                       '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
-        httpserver.expect_request(
-            '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
+        expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=1')
+        httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
-    testargs = ['prog', '--from-url', get_url_root(httpserver), '--to-url', httpserver.url_for(
-        '/'), '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'new-org']
+    testargs = [
+        'prog',
+        '--from-url',
+        get_url_root(httpserver),
+        '--to-url',
+        httpserver.url_for('/'),
+        '--to-login',
+        'foo',
+        '--to-password',
+        'bar',
+        '--from-org',
+        'spring-projects',
+        '--to-org',
+        'new-org']
 
-    with raises(ValueError, match='Type "" not supported or not detected from URL "' +
-                get_url_root(httpserver) + '".'):
+    with raises(ValueError, match='Type "" not supported or not detected from URL "' + get_url_root(httpserver) + '".'):
         with patch.object(sys, 'argv', testargs):
             git_platforms_synchro.main()
             # Should have raised an error
@@ -75,8 +82,29 @@ def test_from_github_proxy_not_implemented(httpserver: HTTPServer, caplog: LogCa
 def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub',
-                '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = [
+        'prog',
+        '--dry-run',
+        '--from-url',
+        get_url_root(httpserver),
+        '--from-type',
+        'GitHub',
+        '--to-url',
+        get_url_root(httpserver),
+        '--to-type',
+        'GitHub',
+        '--to-login',
+        'foo',
+        '--to-password',
+        'bar',
+        '--from-org',
+        'spring-projects',
+        '--to-org',
+        'spring-projects',
+        '--repos-include',
+        'spring-petclinic',
+        '--branches-include',
+        'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
@@ -87,8 +115,31 @@ def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureF
 def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-login', 'ghu_foo1234567890abcdef',
-                '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = [
+        'prog',
+        '--dry-run',
+        '--from-url',
+        get_url_root(httpserver),
+        '--from-type',
+        'GitHub',
+        '--from-login',
+        'ghu_foo1234567890abcdef',
+        '--to-url',
+        get_url_root(httpserver),
+        '--to-type',
+        'GitHub',
+        '--to-login',
+        'foo',
+        '--to-password',
+        'bar',
+        '--from-org',
+        'spring-projects',
+        '--to-org',
+        'spring-projects',
+        '--repos-include',
+        'spring-petclinic',
+        '--branches-include',
+        'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
@@ -99,8 +150,33 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
 def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_gitea_with_spring_projects(httpserver)
 
-    testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'Gitea', '--from-login', 'foo', '--from-password', 'bar',
-                '--to-url', get_url_root(httpserver), '--to-type', 'Gitea', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'MyOrg', '--to-org', 'MyOrg', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
+    testargs = [
+        'prog',
+        '--dry-run',
+        '--from-url',
+        get_url_root(httpserver),
+        '--from-type',
+        'Gitea',
+        '--from-login',
+        'foo',
+        '--from-password',
+        'bar',
+        '--to-url',
+        get_url_root(httpserver),
+        '--to-type',
+        'Gitea',
+        '--to-login',
+        'foo',
+        '--to-password',
+        'bar',
+        '--from-org',
+        'MyOrg',
+        '--to-org',
+        'MyOrg',
+        '--repos-include',
+        'spring-petclinic',
+        '--branches-include',
+        'main,springboot3']
     with patch.object(sys, 'argv', testargs):
         git_platforms_synchro.main()
 
@@ -110,8 +186,7 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver, prepare_branches=False)
-    httpserver.expect_request(
-        '/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
+    httpserver.expect_request('/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
     prepare_gitea_with_spring_projects(httpserver)
 
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
@@ -125,12 +200,15 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
 
     # Gitea with "Empty" org
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
+    httpserver.expect_request('/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
+    httpserver.expect_oneshot_request('/api/v1/repos/MyOrg/spring-petclinic').respond_with_data(status=404)
     httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
-    httpserver.expect_oneshot_request(
-        '/api/v1/repos/MyOrg/spring-petclinic').respond_with_data(status=404)
-    httpserver.expect_request(
-        '/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
+        '/api/v1/orgs/MyOrg/repos',
+        method='POST').respond_with_json(
+        status=201,
+        response_json={
+            'id': 42,
+            'name': 'spring-petclinic'})
     # Newly created repo at second call
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic')
 
@@ -139,16 +217,17 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
     # push failure
     mock_cloned_repo(httpserver, bare=True)
     httpserver.expect_request(
-        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
+        '/MyOrg/spring-petclinic.git/info/refs',
+        query_string='service=git-receive-pack',
+        method='GET').respond_with_data(
+        status=542)
 
     with raises(GitCommandError):
         with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
     assert 'Repository does not exist on "to" plaform, create as mirror...' in caplog.text
-    assert 'Reusing existing cloned repo ' + \
-        get_url_root(httpserver) + \
-        '/spring-projects/spring-petclinic.git' in caplog.text
+    assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
 
 
@@ -157,29 +236,27 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
 
     # Gitea with "Empty" org
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
-    httpserver.expect_request(
-        '/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
+    httpserver.expect_request('/api/v1/users/MyOrg/repos', query_string='page=1').respond_with_json([])
 
     # Empty repo on first call and newly created repo at second call ('empty' value not important in this case)
-    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic',
-                   str_to_replace='"empty": false,', str_replacement='"empty": true,')
-    httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1').respond_with_json([])
+    expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-petclinic', str_to_replace='"empty": false,', str_replacement='"empty": true,')
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/branches', query_string='page=1').respond_with_json([])
 
     # httpserver doesn't support KeepAlive, so we need to mock the git clone
     # as already existing bare directory (reuse mechanism) and mock the git
     # push failure
     mock_cloned_repo(httpserver, bare=True)
     httpserver.expect_request(
-        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
+        '/MyOrg/spring-petclinic.git/info/refs',
+        query_string='service=git-receive-pack',
+        method='GET').respond_with_data(
+        status=542)
 
     with raises(GitCommandError):
         with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
     assert 'Repository has no branches on "to" platform, synchronize as mirror...' in caplog.text
-    assert 'Reusing existing cloned repo ' + \
-        get_url_root(httpserver) + \
-        '/spring-projects/spring-petclinic.git' in caplog.text
+    assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
 
 
@@ -189,7 +266,10 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     # push failure
     mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
-        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
+        '/MyOrg/spring-petclinic.git/info/refs',
+        query_string='service=git-receive-pack',
+        method='GET').respond_with_data(
+        status=542)
 
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
@@ -201,9 +281,7 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
         with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
-    assert 'Reusing existing cloned repo ' + \
-        get_url_root(httpserver) + \
-        '/spring-projects/spring-petclinic.git' in caplog.text
+    assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'Synchronize branch...' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
 
@@ -214,23 +292,23 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     # push failure
     mock_cloned_repo(httpserver, bare=False)
     httpserver.expect_request(
-        '/MyOrg/spring-petclinic.git/info/refs', query_string='service=git-receive-pack', method='GET').respond_with_data(status=542)
+        '/MyOrg/spring-petclinic.git/info/refs',
+        query_string='service=git-receive-pack',
+        method='GET').respond_with_data(
+        status=542)
 
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with same repo
     prepare_gitea_with_spring_projects(httpserver, prepare_tags=False)
-    httpserver.expect_request(
-        '/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
     with raises(GitCommandError):
         with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
             git_platforms_synchro.main()
 
-    assert 'Reusing existing cloned repo ' + \
-        get_url_root(httpserver) + \
-        '/spring-projects/spring-petclinic.git' in caplog.text
+    assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'All branches already synchronized, do tags only...' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
 

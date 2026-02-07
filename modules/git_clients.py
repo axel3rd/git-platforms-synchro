@@ -40,6 +40,14 @@ def check_inputs(org: str, repo: str = None):
 
 class GitClient(ABC):
 
+    def get_login_or_token(self) -> str:
+        # Should return the login or token of the platform
+        pass
+
+    def get_password(self) -> str:
+        # Should return the password of the platform
+        pass
+
     def get_url(self) -> str:
         # Should return the base URL of the platform
         pass
@@ -78,6 +86,14 @@ class BitbucketClient(GitClient):
     def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
         self.bitbucket = Bitbucket(url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
         self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
+        self.login_or_token = login_or_token
+        self.password = password
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
 
     def get_url(self) -> str:
         return self.bitbucket.url
@@ -129,6 +145,14 @@ class GiteaClient(GitClient):
     def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
         self.gitea = Gitea(gitea_url=url, auth=(
             login_or_token, password), verify=ssl_verify, proxy=proxy)
+        self.login_or_token = login_or_token
+        self.password = password
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
 
     def get_url(self) -> str:
         return self.gitea.url
@@ -198,6 +222,14 @@ class GitHubClient(GitClient):
             elif password is not None:
                 auth = Auth.Login(login_or_token, password)
         self.github = Github(base_url=url, auth=auth, verify=ssl_verify)
+        self.login_or_token = login_or_token
+        self.password = password
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
 
     def get_url(self) -> str:
         return self.url
@@ -258,12 +290,16 @@ class GitLabClient(GitClient):
 
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
         self.url = url
+        self.login_or_token = login_or_token
+        self.password = password
         session = None
         private_token = None
         http_username = None
         http_password = None
-        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
+        if login_or_token is not None and login_or_token.startswith('glpat-') and len(login_or_token) >= 55:
             private_token = login_or_token
+        elif password is not None and password.startswith('glpat-') and len(password) >= 55:
+            private_token = password
         elif password is not None:
             http_username = login_or_token
             http_password = password
@@ -278,6 +314,12 @@ class GitLabClient(GitClient):
             private_token=private_token,
             ssl_verify=ssl_verify,
             session=session)
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
 
     def get_url(self) -> str:
         return self.url

@@ -8,7 +8,17 @@ from requests import exceptions
 
 def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     with raises(NotImplementedError, match=re.escape("Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.")):
-        GitClientFactory.create_client("https://fake.url.dev", 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
+        GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
+
+
+def test_github_connection_params():
+    github = GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx')
+    assert 'ghu_xxxx' == github.get_login_or_token()
+    assert 'https://fake.url.dev' == github.get_url()
+    assert github.get_password() is None
+    github = GitClientFactory.create_client('https://fake.url.dev', 'github', 'login', 'password')
+    assert 'login' == github.get_login_or_token()
+    assert 'password' == github.get_password()
 
 
 def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -61,12 +71,19 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
 
 def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    gitea = GitClientFactory.create_client("https://fake.url.dev", 'gitea', 'foo', 'bar', proxy=get_url_root(httpserver))
+    gitea = GitClientFactory.create_client('https://fake.url.dev', 'gitea', 'foo', 'bar', proxy=get_url_root(httpserver))
 
     with raises(exceptions.ProxyError):
         gitea.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gitea_connection_params():
+    gitea = GitClientFactory.create_client('https://fake.url.dev', 'gitea', 'login', 'password')
+    assert 'login' == gitea.get_login_or_token()
+    assert 'password' == gitea.get_password()
+    assert 'https://fake.url.dev' == gitea.get_url()
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -182,6 +199,13 @@ def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
 
+def test_bitbucket_connection_params():
+    bitbucket = GitClientFactory.create_client('https://fake.url.dev', 'bitbucket', 'login', 'password')
+    assert 'login' == bitbucket.get_login_or_token()
+    assert 'password' == bitbucket.get_password()
+    assert 'https://fake.url.dev' == bitbucket.get_url()
+
+
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic')
@@ -235,6 +259,22 @@ def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
         gitlab.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gitlab_connection_params():
+    gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'login', 'password')
+    assert 'login' == gitlab.get_login_or_token()
+    assert 'password' == gitlab.get_password()
+    assert 'https://fake.url.dev' == gitlab.get_url()
+
+    gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    assert 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' == gitlab.get_login_or_token()
+    assert gitlab.get_password() is None
+
+    # ~Recall for 'private_token' deteaction from password in initialization
+    gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'foo', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    assert 'foo' == gitlab.get_login_or_token()
+    assert 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' == gitlab.get_password()
 
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
