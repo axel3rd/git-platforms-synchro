@@ -262,7 +262,7 @@ class GitLabClient(GitClient):
         private_token = None
         http_username = None
         http_password = None
-        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
+        if login_or_token.startswith('glpat-') and len(login_or_token) >= 55:
             private_token = login_or_token
         elif password is not None:
             http_username = login_or_token

@@ -99,6 +99,7 @@ pytest
 
 # Or with code coverage
 coverage run --concurrency=thread --parallel-mode -m pytest
+coverage combine
 coverage html
 ```
 
