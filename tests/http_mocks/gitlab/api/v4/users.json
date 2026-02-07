@@ -1,0 +1,12 @@
+[
+    {
+        "id": 42,
+        "username": "axel3rd",
+        "public_email": "",
+        "name": "axel 3rd",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/7bfca345df67f82e019ed5c436ac37b1e05d126af679efbc0df6cf4ecf343174?s=80\u0026d=identicon",
+        "web_url": "https://gitlab.com/axel3rd"
+    }
+]

@@ -8,4 +8,5 @@ pytest_httpserver
 gitpython
 atlassian-python-api
 py-gitea
+python-gitlab
 PyGithub

@@ -1,7 +1,8 @@
 # IDE
 /.vscode/
 /.sonarlint/
-/.coverage
+/.coverage*
+/coverage.xml
 
 # Environment Byte-compiled / optimized / DLL files
 /**/__pycache__/**
@@ -10,4 +11,3 @@
 # Temporary or testing files
 /tmp-git-repo/
 /htmlcov/
-coverage.xml

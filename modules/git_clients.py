@@ -1,20 +1,27 @@
 import re
 from abc import ABC
 try:
-    from github import Github, Auth, GithubException
-    GITHUB_AVAILABLE = True
+    from atlassian import Bitbucket
+    BITBUCKET_AVAILABLE = True
 except ImportError:
-    GITHUB_AVAILABLE = False
+    BITBUCKET_AVAILABLE = False
 try:
     from gitea import Gitea, Organization, User, Repository, NotFoundException
     GITEA_AVAILABLE = True
 except ImportError:
     GITEA_AVAILABLE = False
 try:
-    from atlassian import Bitbucket
-    BITBUCKET_AVAILABLE = True
+    from gitlab import Gitlab, GitlabError
+    import requests
+    GITLAB_AVAILABLE = True
 except ImportError:
-    BITBUCKET_AVAILABLE = False
+    GITLAB_AVAILABLE = False
+try:
+    from github import Github, Auth, GithubException
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
+
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
@@ -64,6 +71,117 @@ class GitClient(ABC):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         # Should create a repository in the platform
         pass
+
+
+class BitbucketClient(GitClient):
+
+    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.bitbucket = Bitbucket(url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
+        self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
+
+    def get_url(self) -> str:
+        return self.bitbucket.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in self.bitbucket.repo_all_list(org):
+            repos.append(repo['slug'])
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        return self.bitbucket.repo_exists(org, repo)
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.bitbucket.get_repo(org, repo)['description']
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        for link in self.bitbucket.get_repo(org, repo)['links']['clone']:
+            if 'http' == link['name']:
+                return link['href']
+        raise ValueError('Cannot not found http clone link')
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        for branch in self.bitbucket.get_branches(org, repo, details=False):
+            branches_commits[branch['displayId']] = branch['latestCommit']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.bitbucket.get_tags(org, repo, limit=0):
+            tags_commits[tag['displayId']] = tag['latestCommit']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        self.bitbucket.create_repo(org, repo)
+        self.bitbucket.update_repo(org, repo, description=description)
+
+
+class GiteaClient(GitClient):
+
+    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.gitea = Gitea(gitea_url=url, auth=(
+            login_or_token, password), verify=ssl_verify, proxy=proxy)
+
+    def get_url(self) -> str:
+        return self.gitea.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in User.request(self.gitea, org).get_repositories():
+            repos.append(repo.name)
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        try:
+            return Repository.request(self.gitea, org, repo) is not None
+        except NotFoundException:
+            return False
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return Repository.request(self.gitea, org, repo).description
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return Repository.request(self.gitea, org, repo).clone_url
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        # 'Repository.request(self.gitea, org, repo).get_branches()' currently does not support pagination
+        results = self.gitea.requests_get_paginated(
+            '/repos/%s/%s/branches' % (org, repo))
+        for result in results:
+            branches_commits[result['name']] = result['commit']['id']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        results = self.gitea.requests_get_paginated(
+            '/repos/%s/%s/tags' % (org, repo))
+        for result in results:
+            tags_commits[result['name']] = result['id']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        try:
+            Organization.request(self.gitea, org).create_repo(
+                repoName=repo, description=description, autoInit=False)
+        except NotFoundException:
+            User.request(self.gitea, org).create_repo(
+                repoName=repo, description=description, autoInit=False)
 
 
 class GitHubClient(GitClient):
@@ -136,127 +254,88 @@ class GitHubClient(GitClient):
                 raise e
 
 
-class GiteaClient(GitClient):
+class GitLabClient(GitClient):
 
-    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.gitea = Gitea(gitea_url=url, auth=(
-            login_or_token, password), verify=ssl_verify, proxy=proxy)
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.url = url
+        session = None
+        private_token = None
+        http_username = None
+        http_password = None
+        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
+            private_token = login_or_token
+        elif password is not None:
+            http_username = login_or_token
+            http_password = password
+        if proxy is not None:
+            session = requests.Session()
+            session.proxies.update({'http': proxy, 'https': proxy})
+
+        self.gitlab = Gitlab(
+            self.url,
+            http_username=http_username,
+            http_password=http_password,
+            private_token=private_token,
+            ssl_verify=ssl_verify,
+            session=session)
 
     def get_url(self) -> str:
-        return self.gitea.url
+        return self.url
 
     def get_repos(self, org: str) -> list:
         check_input(org, MSG_EMPTY_ORG)
         repos = []
-        for repo in User.request(self.gitea, org).get_repositories():
+        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
             repos.append(repo.name)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
         check_inputs(org, repo)
         try:
-            return Repository.request(self.gitea, org, repo) is not None
-        except NotFoundException:
-            return False
+            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
+        except GitlabError as e:
+            if e.response_code == 404:
+                return False
+            raise e
 
     def get_repo_description(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return Repository.request(self.gitea, org, repo).description
+        return self.gitlab.projects.get(str(org + '/' + repo)).description
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
         check_inputs(org, repo)
-        return Repository.request(self.gitea, org, repo).clone_url
+        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
 
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        # 'Repository.request(self.gitea, org, repo).get_branches()' currently does not support pagination
-        results = self.gitea.requests_get_paginated(
-            '/repos/%s/%s/branches' % (org, repo))
-        for result in results:
-            branches_commits[result['name']] = result['commit']['id']
+        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
+            branches_commits[branch.name] = branch.commit['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = self.gitea.requests_get_paginated(
-            '/repos/%s/%s/tags' % (org, repo))
-        for result in results:
-            tags_commits[result['name']] = result['id']
+        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
+            tags_commits[tag.name] = tag.commit['id']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
-        try:
-            Organization.request(self.gitea, org).create_repo(
-                repoName=repo, description=description, autoInit=False)
-        except NotFoundException:
-            User.request(self.gitea, org).create_repo(
-                repoName=repo, description=description, autoInit=False)
-
-
-class BitbucketClient(GitClient):
-
-    def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.bitbucket = Bitbucket(
-            url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
-        self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
-
-    def get_url(self) -> str:
-        return self.bitbucket.url
-
-    def get_repos(self, org: str) -> list:
-        check_input(org, MSG_EMPTY_ORG)
-        repos = []
-        for repo in self.bitbucket.repo_all_list(org):
-            repos.append(repo['slug'])
-        return repos
-
-    def has_repo(self, org: str, repo: str) -> bool:
-        check_inputs(org, repo)
-        return self.bitbucket.repo_exists(org, repo)
-
-    def get_repo_description(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        return self.bitbucket.get_repo(org, repo)['description']
-
-    def get_repo_clone_url(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        for link in self.bitbucket.get_repo(org, repo)['links']['clone']:
-            if 'http' == link['name']:
-                return link['href']
-        raise ValueError('Cannot not found http clone link')
-
-    def get_branches(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
-        branches_commits = {}
-        for branch in self.bitbucket.get_branches(org, repo, details=False):
-            branches_commits[branch['displayId']] = branch['latestCommit']
-        return branches_commits
-
-    def get_tags(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
-        tags_commits = {}
-        for tag in self.bitbucket.get_tags(org, repo, limit=0):
-            tags_commits[tag['displayId']] = tag['latestCommit']
-        return tags_commits
-
-    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
-        check_inputs(org, repo)
-        self.bitbucket.create_repo(org, repo)
-        self.bitbucket.update_repo(org, repo, description=description)
+        self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
 class GitClientFactory:
     @staticmethod
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
-        if GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
-            return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
+        if BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
+            return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
         elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
-        elif BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
-            return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
+        elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
+            return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
+        elif GITLAB_AVAILABLE and ('gitlab'.casefold() == type.casefold() or 'gitlab' in url):
+            return GitLabClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
-                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - GitHub (PyGithub): {GITHUB_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}.')
+                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')
