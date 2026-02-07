@@ -76,8 +76,7 @@ class GitClient(ABC):
 class BitbucketClient(GitClient):
 
     def __init__(self, url: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.bitbucket = Bitbucket(
-            url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
+        self.bitbucket = Bitbucket(url=url, username=login_or_token, password=password, verify_ssl=ssl_verify)
         self.bitbucket._session.proxies = {'http': proxy, 'https': proxy}
 
     def get_url(self) -> str:
@@ -185,81 +184,6 @@ class GiteaClient(GitClient):
                 repoName=repo, description=description, autoInit=False)
 
 
-class GitLabClient(GitClient):
-
-    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
-        self.url = url
-        session = None
-        private_token = None
-        http_username = None
-        http_password = None
-        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
-            private_token = login_or_token
-        elif password is not None:
-            http_username = login_or_token
-            http_password = password
-        if proxy is not None:
-            session = requests.Session()
-            session.proxies.update({'http': proxy, 'https': proxy})
-
-        self.gitlab = Gitlab(
-            self.url,
-            http_username=http_username,
-            http_password=http_password,
-            private_token=private_token,
-            ssl_verify=ssl_verify,
-            session=session)
-
-    def get_url(self) -> str:
-        return self.url
-
-    def get_repos(self, org: str) -> list:
-        check_input(org, MSG_EMPTY_ORG)
-        repos = []
-        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
-            repos.append(repo.name)
-        return repos
-
-    def has_repo(self, org: str, repo: str) -> bool:
-        check_inputs(org, repo)
-        try:
-            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
-        except GitlabError as e:
-            if e.response_code == 404:
-                return False
-            raise e
-
-    def get_repo_description(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        return self.gitlab.projects.get(str(org + '/' + repo)).description
-
-    def get_repo_clone_url(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
-
-    def get_branches(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
-        branches_commits = {}
-        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
-            branches_commits[branch.name] = branch.commit['id']
-        return branches_commits
-
-    def get_tags(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
-        tags_commits = {}
-        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
-            tags_commits[tag.name] = tag.commit['id']
-        return tags_commits
-
-    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
-        check_inputs(org, repo)
-        self.gitlab.projects.create({
-            'name': repo,
-            'description': description,
-            'visibility': 'private'
-        })
-
-
 class GitHubClient(GitClient):
 
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
@@ -328,6 +252,77 @@ class GitHubClient(GitClient):
                     name=repo, description=description, auto_init=False)
             else:
                 raise e
+
+
+class GitLabClient(GitClient):
+
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.url = url
+        session = None
+        private_token = None
+        http_username = None
+        http_password = None
+        if login_or_token.startswith('glpat-') and len(login_or_token) > 55:
+            private_token = login_or_token
+        elif password is not None:
+            http_username = login_or_token
+            http_password = password
+        if proxy is not None:
+            session = requests.Session()
+            session.proxies.update({'http': proxy, 'https': proxy})
+
+        self.gitlab = Gitlab(
+            self.url,
+            http_username=http_username,
+            http_password=http_password,
+            private_token=private_token,
+            ssl_verify=ssl_verify,
+            session=session)
+
+    def get_url(self) -> str:
+        return self.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
+            repos.append(repo.name)
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        try:
+            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
+        except GitlabError as e:
+            if e.response_code == 404:
+                return False
+            raise e
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.gitlab.projects.get(str(org + '/' + repo)).description
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
+            branches_commits[branch.name] = branch.commit['id']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
+            tags_commits[tag.name] = tag.commit['id']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
 class GitClientFactory:
