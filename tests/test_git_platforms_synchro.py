@@ -1,7 +1,6 @@
 import re
 import sys
 import git_platforms_synchro
-from modules.utils import ENV_TEST_MODE
 from git import GitCommandError
 from unittest.mock import patch
 from pytest_httpserver import HTTPServer

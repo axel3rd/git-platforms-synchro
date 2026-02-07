@@ -77,6 +77,6 @@ def test_display(caplog: LogCaptureFixture):
     assert 'Git "from" login or token   : None' in caplog.text
     assert 'Git "from" proxy            : http://localhost:8000' in caplog.text
     assert 'Git "to" platform URL       : https://to.git.com' in caplog.text
-    assert 'Git "to" login or token     : gh***************************' in caplog.text
+    assert 'Git "to" login or token     : ghu_************************' in caplog.text
     assert 'Git "to" proxy              : http://***@localhost:8000' in caplog.text
     assert 'Git "to" description prefix : Synchro - ' in caplog.text

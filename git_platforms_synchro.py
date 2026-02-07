@@ -22,6 +22,22 @@ def log_init(level: str):
         logging.getLogger("gitea").setLevel(logging.WARNING)
 
 
+def set_git_credentials(username: str, password: str):
+    if not username and not password:
+        os.environ.pop('GIT_ASKPASS')
+        os.environ.pop('GIT_USERNAME')
+        os.environ.pop('GIT_PASSWORD')
+        return
+
+    working_dir = os.path.dirname(os.path.realpath(__file__))
+
+    os.environ['GIT_ASKPASS'] = os.path.join(working_dir, 'modules', 'git_askpass.py')
+    if username:
+        os.environ['GIT_USERNAME'] = username
+    if password:
+        os.environ['GIT_PASSWORD'] = password
+
+
 def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, proxy: str = None) -> Repo:
     if os.path.exists(TMP_REPO_GIT_DIRECTORY):
         repo_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
@@ -53,7 +69,7 @@ def configure_remote_to(repo: Repo, clone_url_to: str, proxy: str = '', ssl_veri
     repo.config_writer().set_value(GIT_CONFIG_HTTP_PREFIX + ' "' + clone_url_to + '"', 'postBuffer', '524288000').release()
 
 
-def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,
+def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, login_from: str, password_from: str, proxy_from: str, disable_ssl_verify_from: bool,
                 git_to: GitClient, proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, description: str = ''):
     if dry_run:
         logger.info('  Dry-run mode, skipping repository creation and mirroring.')
@@ -61,8 +77,10 @@ def repo_mirror(create_repo: bool, dry_run: bool, clone_url_from: str, proxy_fro
     if create_repo:
         git_to.create_repo(org_to, repo, description)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
+    set_git_credentials(login_from, password_from)
     repo_from_cloned = git_clone(url=clone_url_from, mirror=True, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     configure_remote_to(repo_from_cloned, clone_url_to, proxy_to, not disable_ssl_verify_to)
+    set_git_credentials(git_to.get_login_or_token(), git_to.get_password())
     repo_from_cloned.remote(GIT_REMOTE_TO).push(mirror=True).raise_if_error()
 
 
@@ -77,22 +95,26 @@ def repo_tags_sync(args, clone_url_from: str, git_from: GitClient, git_to: GitCl
         return False
 
     logger.info('  All branches already synchronized, do tags only...')
+    set_git_credentials(git_from.get_login_or_token(), git_from.get_password())
     repo_from_cloned = git_clone(url=clone_url_from, disable_ssl_verify=args.from_disable_ssl_verify, proxy=args.from_proxy)
     clone_url_to = git_to.get_repo_clone_url(args.to_org, repo)
     configure_remote_to(repo_from_cloned, clone_url_to, args.to_proxy, not args.to_disable_ssl_verify)
+    set_git_credentials(git_to.get_login_or_token(), git_to.get_password())
     repo_from_cloned.remote(GIT_REMOTE_TO).push(tags=True).raise_if_error()
     return True
 
 
-def repo_branch_sync(dry_run: bool, clone_url_from: str, proxy_from: str, disable_ssl_verify_from: bool,
+def repo_branch_sync(dry_run: bool, clone_url_from: str, login_from: str, password_from: str, proxy_from: str, disable_ssl_verify_from: bool,
                      git_to: GitClient, proxy_to: str, disable_ssl_verify_to: bool, org_to: str, repo: str, branch: str):
     if dry_run:
         logger.info('    Dry-run mode, skipping branch synchronization.')
         return
+    set_git_credentials(login_from, password_from)
     repo_from_cloned = git_clone(url=clone_url_from, disable_ssl_verify=disable_ssl_verify_from, proxy=proxy_from)
     repo_from_cloned.git.checkout(branch)
     clone_url_to = git_to.get_repo_clone_url(org_to, repo)
     configure_remote_to(repo_from_cloned, clone_url_to, proxy_to, not disable_ssl_verify_to)
+    set_git_credentials(git_to.get_login_or_token(), git_to.get_password())
     repo_from_cloned.remote(GIT_REMOTE_TO).push().raise_if_error()
 
 
@@ -118,7 +140,7 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
             continue
         logger.info('    Synchronize branch...')
         branches_updated += 1
-        repo_branch_sync(args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
+        repo_branch_sync(args.dry_run, clone_url_from, args.from_login, args.from_password, args.from_proxy, args.from_disable_ssl_verify,
                          git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, branch)
     return branches_scanned, branches_updated
 
@@ -153,7 +175,7 @@ def main() -> int:
             logger.info('  Repository does not exist on "to" plaform, create as mirror...')
             total_repos_updated += 1
             description = git_from.get_repo_description(args.from_org, repo)
-            repo_mirror(True, args.dry_run, clone_url_from, args.from_proxy, args.from_disable_ssl_verify,
+            repo_mirror(True, args.dry_run, clone_url_from, args.from_login, args.from_password, args.from_proxy, args.from_disable_ssl_verify,
                         git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, args.to_description_prefix + (description if description is not None else ''))
             continue
 
@@ -172,6 +194,8 @@ def main() -> int:
                 False,
                 args.dry_run,
                 clone_url_from,
+                args.from_login,
+                args.from_password,
                 args.from_proxy,
                 args.from_disable_ssl_verify,
                 git_to,

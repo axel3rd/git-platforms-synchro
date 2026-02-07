@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def hide(string: str, after: int = 2) -> str:
+def hide(string: str, after: int = 4) -> str:
     if string is not None and len(string) > after:
         return string[:after] + '*' * (len(string) - after)
     return string

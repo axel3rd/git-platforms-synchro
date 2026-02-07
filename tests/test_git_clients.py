@@ -11,6 +11,15 @@ def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
         GitClientFactory.create_client("https://fake.url.dev", 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
 
 
+def test_github_credentials():
+    github = GitClientFactory.create_client("https://fake.url.dev", 'github', 'ghu_xxxx')
+    assert 'ghu_xxxx' == github.get_login_or_token()
+    assert github.get_password() is None
+    github = GitClientFactory.create_client("https://fake.url.dev", 'github', 'login', 'password')
+    assert 'login' == github.get_login_or_token()
+    assert 'password' == github.get_password()
+
+
 def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
@@ -67,6 +76,12 @@ def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
         gitea.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gitea_credentials():
+    gitea = GitClientFactory.create_client("https://fake.url.dev", 'gitea', 'login', 'password')
+    assert 'login' == gitea.get_login_or_token()
+    assert 'password' == gitea.get_password()
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -182,6 +197,12 @@ def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
 
+def test_bitbucket_credentials():
+    bitbucket = GitClientFactory.create_client('https://fake.url.dev', 'bitbucket', 'login', 'password')
+    assert 'login' == bitbucket.get_login_or_token()
+    assert 'password' == bitbucket.get_password()
+
+
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic')
@@ -235,6 +256,12 @@ def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
         gitlab.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gitlab_credentials():
+    gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'login', 'password')
+    assert 'login' == gitlab.get_login_or_token()
+    assert 'password' == gitlab.get_password()
 
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
