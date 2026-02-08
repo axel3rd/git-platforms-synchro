@@ -30,7 +30,7 @@ def parse():
     parser.add_argument('--from-org',
                         help='Git "from" organization/user/project.', required=True)
     parser.add_argument('--from-type',
-                        help='Git "from" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).', default='')
+                        help='Git "from" type (Bitbucket, Gerrit, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--from-proxy',
                         help='Git "from" proxy (with credentials if needed).')
     parser.add_argument('--from-disable-ssl-verify',
@@ -44,7 +44,7 @@ def parse():
     parser.add_argument('--to-org',
                         help='Git "to" organization/user/project.', required=True)
     parser.add_argument(
-        '--to-type', help='Git "to" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).', default='')
+        '--to-type', help='Git "to" type (Bitbucket, Gitea, Gerrit, GitLab, GitHub, ... ; To use when cannot be detected from URL).', default='')
     parser.add_argument('--to-proxy',
                         help='Git "to" proxy (with credentials if needed).')
     parser.add_argument('--to-disable-ssl-verify',
