@@ -6,6 +6,7 @@ Synchronize branches of repositories from a Git platform to another (with rebase
 
 Supported platforms:
 - Bitbucket
+- Gerrit Code Review
 - Gitea
 - GitHub
 - GitLab
@@ -22,7 +23,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[bitbucket|gitea|github|gitlab].txt`
+For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[bitbucket|gerrit|gitea|github|gitlab].txt`
 
 ### Execution program
 
@@ -53,7 +54,7 @@ options:
                         Git "from" password.
   --from-org FROM_ORG   Git "from" organization/user/project.
   --from-type FROM_TYPE
-                        Git "from" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
+                        Git "from" type (Bitbucket, Gerrit, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
                         Git "from" proxy (with credentials if needed).
   --from-disable-ssl-verify
@@ -63,7 +64,7 @@ options:
   --to-password TO_PASSWORD
                         Git "to" password.
   --to-org TO_ORG       Git "to" organization/user/project.
-  --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
+  --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, Gerrit, GitLab, GitHub, ... ; To use when cannot be detected from URL).
   --to-proxy TO_PROXY   Git "to" proxy (with credentials if needed).
   --to-disable-ssl-verify
                         Git "to" disable SSL verification.

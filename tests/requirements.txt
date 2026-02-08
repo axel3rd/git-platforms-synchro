@@ -7,6 +7,7 @@ pytest_httpserver
 # Repeat of the main requirements, avoiding two "pip install" commands when tests executed
 gitpython
 atlassian-python-api
+python-gerrit-api
 py-gitea
 python-gitlab
 PyGithub

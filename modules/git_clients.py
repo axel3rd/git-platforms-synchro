@@ -6,6 +6,11 @@ try:
 except ImportError:
     BITBUCKET_AVAILABLE = False
 try:
+    from gerrit import GerritClient
+    GERRIT_AVAILABLE = True
+except ImportError:
+    GERRIT_AVAILABLE = False
+try:
     from gitea import Gitea, Organization, User, Repository, NotFoundException
     GITEA_AVAILABLE = True
 except ImportError:
@@ -138,6 +143,65 @@ class BitbucketClient(GitClient):
         check_inputs(org, repo)
         self.bitbucket.create_repo(org, repo)
         self.bitbucket.update_repo(org, repo, description=description)
+
+
+class GerritCodeReviewClient(GitClient):
+
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.url = url
+        self.login_or_token = login_or_token
+        self.password = password
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
+
+    def get_url(self) -> str:
+        return self.url
+
+    def get_repos(self, org: str) -> list:
+        check_input(org, MSG_EMPTY_ORG)
+        repos = []
+        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
+            repos.append(repo.name)
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_inputs(org, repo)
+        try:
+            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
+        except GitlabError as e:
+            if e.response_code == 404:
+                return False
+            raise e
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.gitlab.projects.get(str(org + '/' + repo)).description
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_inputs(org, repo)
+        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        branches_commits = {}
+        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
+            branches_commits[branch.name] = branch.commit['id']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_inputs(org, repo)
+        tags_commits = {}
+        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
+            tags_commits[tag.name] = tag.commit['id']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_inputs(org, repo)
+        self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
 class GiteaClient(GitClient):
@@ -372,6 +436,8 @@ class GitClientFactory:
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
         if BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
             return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
+        elif GERRIT_AVAILABLE and ('gerrit'.casefold() == type.casefold() or 'gerrit' in url):
+            return GerritCodeReviewClient(url, login_or_token, password, ssl_verify, proxy)
         elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
         elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
@@ -380,4 +446,4 @@ class GitClientFactory:
             return GitLabClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
-                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')
+                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gerrit (python-gerrit-api): {GERRIT_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')

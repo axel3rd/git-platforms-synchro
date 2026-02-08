@@ -318,3 +318,62 @@ def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     assert 0 == len(gitlab.get_branches('axel3rd', 'spring-petclinic'))
     assert 0 == len(gitlab.get_tags('axel3rd', 'spring-petclinic'))
+
+
+def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'foo', 'bar', proxy=get_url_root(httpserver))
+
+    with raises(exceptions.ProxyError):
+        gerrit.get_repos('Fake')
+
+    assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gerrit_connection_params():
+    gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'login', 'password')
+    assert 'login' == gerrit.get_login_or_token()
+    assert 'password' == gerrit.get_password()
+    assert 'https://fake.url.dev' == gerrit.get_url()
+
+
+def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitlab', '/api/v4/users', 'username=axel3rd')
+    expect_request(httpserver, 'gitlab', '/api/v4/users/42/projects', 'include_subgroups=True')
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/78242723/repository/branches')
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/78242723/repository/tags')
+    httpserver.expect_request('/api/v4/projects/axel3rd/non-existing-repo').respond_with_data(status=404)
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+
+    assert 2 == len(gerrit.get_repos('axel3rd'))
+    assert gerrit.has_repo('axel3rd', 'spring-petclinic')
+    assert not gerrit.has_repo('axel3rd', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/axel3rd/spring-petclinic.git' == gerrit.get_repo_clone_url('axel3rd', 'spring-petclinic')
+    assert 'A sample Spring-based application' == gerrit.get_repo_description('axel3rd', 'spring-petclinic')
+    assert 8 == len(gerrit.get_branches('axel3rd', 'spring-petclinic'))
+    assert 1 == len(gerrit.get_tags('axel3rd', 'spring-petclinic'))
+    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gerrit.get_tags('axel3rd', 'spring-petclinic')['1.5.x']
+
+
+def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_request('/api/v4/projects', method='POST').respond_with_json(status=201, response_json={
+        'id': 42,
+        'name': 'new-repo'})
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+
+    gerrit.create_repo('axel3rd', 'new-repo')
+
+
+def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gerrit', '/api/v4/users', 'username=axel3rd')
+    expect_request(httpserver, 'gerrit', '/api/v4/users/42/projects', 'include_subgroups=True')
+    expect_request(httpserver, 'gerrit', '/api/v4/projects/axel3rd/spring-petclinic')
+    httpserver.expect_request('/api/v4/projects/78242723/repository/branches').respond_with_data('[]')
+    httpserver.expect_request('/api/v4/projects/78242723/repository/tags').respond_with_data('[]')
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+
+    assert 0 == len(gerrit.get_branches('axel3rd', 'spring-petclinic'))
+    assert 0 == len(gerrit.get_tags('axel3rd', 'spring-petclinic'))

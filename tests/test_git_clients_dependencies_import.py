@@ -14,6 +14,10 @@ def test_no_bitbucket(request):
     exec_test_method(request.module.__file__, request.node.name)
 
 
+def test_no_gerrit(request):
+    exec_test_method(request.module.__file__, request.node.name)
+
+
 def test_no_gitlab(request):
     exec_test_method(request.module.__file__, request.node.name)
 
