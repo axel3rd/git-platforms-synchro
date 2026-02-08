@@ -157,6 +157,7 @@ class GerritCodeReviewClient(GitClient):
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
         self.url = url
         self.login_or_token = login_or_token
+        self.password = password
         session = None
         if proxy is not None:
             session = requests.Session()
