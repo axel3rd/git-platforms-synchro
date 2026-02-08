@@ -7,6 +7,7 @@ except ImportError:
     BITBUCKET_AVAILABLE = False
 try:
     from gerrit import GerritClient
+    from gerrit.utils.exceptions import ProjectNotFoundError
     GERRIT_AVAILABLE = True
 except ImportError:
     GERRIT_AVAILABLE = False
@@ -30,7 +31,13 @@ except ImportError:
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
+MSG_GERRIT_ORG = 'Gerrit organization name should be empty.'
 MSG_CREATE_REPO_DESCRIPTION = 'TODO - Provide a description for this repository.'
+
+
+def check_input_empty(param: str, message: str):
+    if param is not None and len(param) > 0:
+        raise ValueError(message)
 
 
 def check_input(param: str, message: str):
@@ -150,7 +157,11 @@ class GerritCodeReviewClient(GitClient):
     def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
         self.url = url
         self.login_or_token = login_or_token
-        self.password = password
+        session = None
+        if proxy is not None:
+            session = requests.Session()
+            session.proxies.update({'http': proxy, 'https': proxy})
+        self.gerrit = GerritClient(base_url=url, username=login_or_token, password=password, ssl_verify=ssl_verify, session=session)
 
     def get_login_or_token(self) -> str:
         return self.login_or_token
@@ -162,46 +173,59 @@ class GerritCodeReviewClient(GitClient):
         return self.url
 
     def get_repos(self, org: str) -> list:
-        check_input(org, MSG_EMPTY_ORG)
+        check_input_empty(org, MSG_GERRIT_ORG)
         repos = []
-        for repo in self.gitlab.users.list(username=org)[0].projects.list(all=True, include_subgroups=True):
-            repos.append(repo.name)
+        for repo in self.gerrit.projects.list(is_all=True):
+            repos.append(repo)
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
-        check_inputs(org, repo)
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
         try:
-            return self.gitlab.projects.get(str(org + '/' + repo)) is not None
-        except GitlabError as e:
-            if e.response_code == 404:
-                return False
-            raise e
+            return self.gerrit.projects.get(repo) is not None
+        except ProjectNotFoundError:
+            return False
 
     def get_repo_description(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        return self.gitlab.projects.get(str(org + '/' + repo)).description
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        return self.gerrit.projects.get(repo).get_description()
 
     def get_repo_clone_url(self, org: str, repo: str) -> str:
-        check_inputs(org, repo)
-        return self.gitlab.projects.get(str(org + '/' + repo)).http_url_to_repo
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        return self.url + '/' + repo + '.git'
 
     def get_branches(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
         branches_commits = {}
-        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
-            branches_commits[branch.name] = branch.commit['id']
+        for branch in self.gerrit.projects.get(repo).branches.list(limit=0):
+            if branch['ref'] in ('HEAD', 'refs/meta/config'):
+                continue
+            branches_commits[branch['ref'].removeprefix('refs/heads/')] = branch['revision']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
-        check_inputs(org, repo)
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
         tags_commits = {}
-        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
-            tags_commits[tag.name] = tag.commit['id']
+        for tag in self.gerrit.projects.get(repo).tags.list(limit=0):
+            # Trick when where is no tag
+            if tag in ('[', ']'):
+                continue
+            tags_commits[tag['ref'].removeprefix('refs/tags/')] = tag['revision']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
-        check_inputs(org, repo)
-        self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        input_ = {
+            "description": description,
+            "submit_type": "INHERIT"
+        }
+        self.gerrit.projects.create(repo, input_)
 
 
 class GiteaClient(GitClient):

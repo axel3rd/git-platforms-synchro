@@ -324,7 +324,7 @@ def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'foo', 'bar', proxy=get_url_root(httpserver))
 
     with raises(exceptions.ProxyError):
-        gerrit.get_repos('Fake')
+        gerrit.get_repos('')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
 
@@ -337,43 +337,43 @@ def test_gerrit_connection_params():
 
 
 def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'gitlab', '/api/v4/users', 'username=axel3rd')
-    expect_request(httpserver, 'gitlab', '/api/v4/users/42/projects', 'include_subgroups=True')
-    expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
-    expect_request(httpserver, 'gitlab', '/api/v4/projects/78242723/repository/branches')
-    expect_request(httpserver, 'gitlab', '/api/v4/projects/78242723/repository/tags')
-    httpserver.expect_request('/api/v4/projects/axel3rd/non-existing-repo').respond_with_data(status=404)
+    expect_request(httpserver, 'gerrit', '/a/projects/', 'all=1&d=0')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/description')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/branches/', 'n=0&s=0')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/tags/', 'n=0&s=0')
+    httpserver.expect_request('/a/projects/non-existing-repo').respond_with_data(status=404)
 
-    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 
-    assert 2 == len(gerrit.get_repos('axel3rd'))
-    assert gerrit.has_repo('axel3rd', 'spring-petclinic')
-    assert not gerrit.has_repo('axel3rd', 'non-existing-repo')
-    assert get_url_root(httpserver) + '/axel3rd/spring-petclinic.git' == gerrit.get_repo_clone_url('axel3rd', 'spring-petclinic')
-    assert 'A sample Spring-based application' == gerrit.get_repo_description('axel3rd', 'spring-petclinic')
-    assert 8 == len(gerrit.get_branches('axel3rd', 'spring-petclinic'))
-    assert 1 == len(gerrit.get_tags('axel3rd', 'spring-petclinic'))
-    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gerrit.get_tags('axel3rd', 'spring-petclinic')['1.5.x']
+    assert 104 == len(gerrit.get_repos(''))
+    assert gerrit.has_repo('', 'test-repo')
+    assert not gerrit.has_repo('', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/test-repo.git' == gerrit.get_repo_clone_url('', 'test-repo')
+    assert 'Testing repo' == gerrit.get_repo_description('', 'test-repo')
+    assert 100 == len(gerrit.get_branches('', 'test-repo'))
+    assert 99 == len(gerrit.get_tags('', 'test-repo'))
+    assert '1fdc5f22d58eeb8ea2395f81d84854439141a848' == gerrit.get_tags('', 'test-repo')['tag-1']
 
 
 def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    httpserver.expect_request('/api/v4/projects', method='POST').respond_with_json(status=201, response_json={
-        'id': 42,
-        'name': 'new-repo'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_data(status=404)
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='PUT').respond_with_data(status=201)
+    # On creation, Gerrit get project twice
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({"id": 'test-repo'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({"id": 'test-repo'})
 
-    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 
-    gerrit.create_repo('axel3rd', 'new-repo')
+    gerrit.create_repo('', 'test-repo')
 
 
 def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    expect_request(httpserver, 'gerrit', '/api/v4/users', 'username=axel3rd')
-    expect_request(httpserver, 'gerrit', '/api/v4/users/42/projects', 'include_subgroups=True')
-    expect_request(httpserver, 'gerrit', '/api/v4/projects/axel3rd/spring-petclinic')
-    httpserver.expect_request('/api/v4/projects/78242723/repository/branches').respond_with_data('[]')
-    httpserver.expect_request('/api/v4/projects/78242723/repository/tags').respond_with_data('[]')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1/branches/', 'n=0&s=0')
+    httpserver.expect_request('/a/projects/test-repo-1/tags/', query_string='n=0&s=0').respond_with_data('[]')
 
-    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 
-    assert 0 == len(gerrit.get_branches('axel3rd', 'spring-petclinic'))
-    assert 0 == len(gerrit.get_tags('axel3rd', 'spring-petclinic'))
+    assert 0 == len(gerrit.get_branches('', 'test-repo-1'))
+    assert 0 == len(gerrit.get_tags('', 'test-repo-1'))
