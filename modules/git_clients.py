@@ -456,7 +456,7 @@ class GitLabClient(GitClient):
         self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
-def check_git_plaform(sys_env: bool, type_wanted: str, type: str, url: str):
+def check_git_plaform(sys_env: bool, type: str, type_wanted: str, url: str):
     if sys_env and (type_wanted.casefold() == type.casefold() or type_wanted in url):
         return True
     return False
