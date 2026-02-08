@@ -456,18 +456,24 @@ class GitLabClient(GitClient):
         self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
+def check_git_plaform(sys_env: bool, type_wanted: str, type: str, url: str):
+    if sys_env and (type_wanted.casefold() == type.casefold() or type_wanted in url):
+        return True
+    return False
+
+
 class GitClientFactory:
     @staticmethod
     def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
-        if BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
+        if check_git_plaform(BITBUCKET_AVAILABLE, type, 'bitbucket', url):
             return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GERRIT_AVAILABLE and ('gerrit'.casefold() == type.casefold() or 'gerrit' in url):
+        elif check_git_plaform(GERRIT_AVAILABLE, type, 'gerrit', url):
             return GerritCodeReviewClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
+        elif check_git_plaform(GITEA_AVAILABLE, type, 'gitea', url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
+        elif check_git_plaform(GITHUB_AVAILABLE, type, 'github', url):
             return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITLAB_AVAILABLE and ('gitlab'.casefold() == type.casefold() or 'gitlab' in url):
+        elif check_git_plaform(GITLAB_AVAILABLE, type, 'gitlab', url):
             return GitLabClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
