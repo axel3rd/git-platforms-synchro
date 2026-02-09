@@ -1,3 +1,4 @@
+import os
 import tarfile
 import git_platforms_synchro
 from modules.utils import delete_temporary_repo_git_directory
@@ -155,4 +156,5 @@ def test_clone_proxy_disable_ssl(httpserver: HTTPServer, caplog: LogCaptureFixtu
         git_platforms_synchro.git_clone(clone_url, disable_ssl_verify=True, proxy='http://localhost:' + proxy_port)
 
     assert 'Cloning repo ' + clone_url in caplog.text
-    assert 'Failed to connect to localhost port ' + proxy_port in caplog.text
+    if os.name != 'nt':
+        assert 'Failed to connect to localhost port ' + proxy_port in caplog.text

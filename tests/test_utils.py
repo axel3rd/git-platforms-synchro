@@ -1,9 +1,10 @@
 import os
 import json
 import tarfile
+import pytest
+from unittest.mock import patch
 from git import Repo
-from git_platforms_synchro import TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory
-from modules.utils import ENV_TEST_MODE
+from modules.utils import ENV_TEST_MODE, TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory
 from pytest_httpserver import HTTPServer
 
 
@@ -45,3 +46,31 @@ def expect_request(httpserver: HTTPServer, type: str, uri: str, query_string: st
     if str_to_replace and str_replacement:
         content = content.replace(str_to_replace, str_replacement)
     httpserver.expect_request(uri, query_string=query_string).respond_with_json(json.loads(content))
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Specific Linux test')
+def test_delete_temporary_repo_git_directory_permission_denied_linux():
+    if not os.path.exists(TMP_REPO_GIT_DIRECTORY):
+        os.mkdir(TMP_REPO_GIT_DIRECTORY)
+    with patch('shutil.rmtree', side_effect=PermissionError("Permission denied")):
+        with pytest.raises(PermissionError) as excinfo:
+            delete_temporary_repo_git_directory(True)
+        assert 'Permission denied' in str(excinfo.value)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Specific Linux test')
+def test_delete_temporary_repo_git_directory_permission_denied_windows(capsys):
+    if not os.path.exists(TMP_REPO_GIT_DIRECTORY):
+        os.mkdir(TMP_REPO_GIT_DIRECTORY)
+
+    mock_result = type('MockResult', (), {
+        'stdout': '',
+        'stderr': '',
+        'returncode': 0
+    })()
+
+    with patch('shutil.rmtree', side_effect=PermissionError("Permission denied")):
+        with patch('os.name', 'nt'):
+            with patch('subprocess.run', return_value=mock_result) as mock_run:
+                delete_temporary_repo_git_directory(True)
+                mock_run.assert_called_once_with(['cmd', '/c', 'rmdir', '/s', '/q', 'tmp-git-repo'], shell=True)
