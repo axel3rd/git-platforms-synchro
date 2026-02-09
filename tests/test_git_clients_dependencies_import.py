@@ -1,4 +1,6 @@
+import os
 import sys
+import pytest
 import subprocess
 
 
@@ -10,17 +12,21 @@ def exec_test_method(test_file: str, test_method: str):
                    'pytest', test_file.replace('tests/', 'tests/sub') + '::' + test_method], check=True)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Inifinite loop on Windows')
 def test_no_bitbucket(request):
     exec_test_method(request.module.__file__, request.node.name)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Inifinite loop on Windows')
 def test_no_gitlab(request):
     exec_test_method(request.module.__file__, request.node.name)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Inifinite loop on Windows')
 def test_no_gitea(request):
     exec_test_method(request.module.__file__, request.node.name)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Inifinite loop on Windows')
 def test_no_github(request):
     exec_test_method(request.module.__file__, request.node.name)
