@@ -6,8 +6,15 @@ from tests.test_utils import get_url_root, expect_request
 from requests import exceptions
 
 
+def test_type_undefined(caplog: LogCaptureFixture):
+    with raises(ValueError, match=re.escape('Type "None" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+        GitClientFactory.create_client('https://fake.url.dev')
+    with raises(ValueError, match=re.escape('Type "" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+        GitClientFactory.create_client('https://fake.url.dev', '')
+
+
 def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    with raises(NotImplementedError, match=re.escape("Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.")):
+    with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
         GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
 
 
@@ -360,8 +367,8 @@ def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_data(status=404)
     httpserver.expect_oneshot_request('/a/projects/test-repo', method='PUT').respond_with_data(status=201)
     # On creation, Gerrit get project twice
-    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({"id": 'test-repo'})
-    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({"id": 'test-repo'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({'id': 'test-repo'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({'id': 'test-repo'})
 
     gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 

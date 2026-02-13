@@ -24,9 +24,9 @@ def log_init(level: str):
 
 def set_git_credentials(username: str, password: str):
     if not username and not password:
-        os.environ.pop('GIT_ASKPASS')
-        os.environ.pop('GIT_USERNAME')
-        os.environ.pop('GIT_PASSWORD')
+        os.environ.pop('GIT_ASKPASS', None)
+        os.environ.pop('GIT_USERNAME', None)
+        os.environ.pop('GIT_PASSWORD', None)
         return
 
     working_dir = os.path.dirname(os.path.realpath(__file__))

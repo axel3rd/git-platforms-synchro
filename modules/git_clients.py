@@ -457,14 +457,15 @@ class GitLabClient(GitClient):
 
 
 def check_git_plaform(sys_env: bool, type: str, type_wanted: str, url: str):
-    if sys_env and (type_wanted.casefold() == type.casefold() or type_wanted in url):
+    if sys_env and ((type is not None and type_wanted.casefold() == type.casefold()) or type_wanted in url):
         return True
     return False
 
 
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
+    def create_client(url, type: str = None, login_or_token: str = None, password: str = None,
+                      ssl_verify: bool = True, proxy: str = None) -> GitClient:
         if check_git_plaform(BITBUCKET_AVAILABLE, type, 'bitbucket', url):
             return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
         elif check_git_plaform(GERRIT_AVAILABLE, type, 'gerrit', url):
