@@ -6,6 +6,12 @@ try:
 except ImportError:
     BITBUCKET_AVAILABLE = False
 try:
+    from gerrit import GerritClient
+    from gerrit.utils.exceptions import ProjectNotFoundError
+    GERRIT_AVAILABLE = True
+except ImportError:
+    GERRIT_AVAILABLE = False
+try:
     from gitea import Gitea, Organization, User, Repository, NotFoundException
     GITEA_AVAILABLE = True
 except ImportError:
@@ -25,7 +31,13 @@ except ImportError:
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
+MSG_GERRIT_ORG = 'Gerrit organization name should be empty.'
 MSG_CREATE_REPO_DESCRIPTION = 'TODO - Provide a description for this repository.'
+
+
+def check_input_empty(param: str, message: str):
+    if param is not None and len(param) > 0:
+        raise ValueError(message)
 
 
 def check_input(param: str, message: str):
@@ -138,6 +150,83 @@ class BitbucketClient(GitClient):
         check_inputs(org, repo)
         self.bitbucket.create_repo(org, repo)
         self.bitbucket.update_repo(org, repo, description=description)
+
+
+class GerritCodeReviewClient(GitClient):
+
+    def __init__(self, url, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None):
+        self.url = url
+        self.login_or_token = login_or_token
+        self.password = password
+        session = None
+        if proxy is not None:
+            session = requests.Session()
+            session.proxies.update({'http': proxy, 'https': proxy})
+        self.gerrit = GerritClient(base_url=url, username=login_or_token, password=password, ssl_verify=ssl_verify, session=session)
+
+    def get_login_or_token(self) -> str:
+        return self.login_or_token
+
+    def get_password(self) -> str:
+        return self.password
+
+    def get_url(self) -> str:
+        return self.url
+
+    def get_repos(self, org: str) -> list:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        repos = []
+        for repo in self.gerrit.projects.list(is_all=True):
+            repos.append(repo)
+        return repos
+
+    def has_repo(self, org: str, repo: str) -> bool:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        try:
+            return self.gerrit.projects.get(repo) is not None
+        except ProjectNotFoundError:
+            return False
+
+    def get_repo_description(self, org: str, repo: str) -> str:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        return self.gerrit.projects.get(repo).get_description()
+
+    def get_repo_clone_url(self, org: str, repo: str) -> str:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        return self.url + '/' + repo + '.git'
+
+    def get_branches(self, org: str, repo: str) -> dict:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        branches_commits = {}
+        for branch in self.gerrit.projects.get(repo).branches.list(limit=0):
+            if branch['ref'] in ('HEAD', 'refs/meta/config'):
+                continue
+            branches_commits[branch['ref'].removeprefix('refs/heads/')] = branch['revision']
+        return branches_commits
+
+    def get_tags(self, org: str, repo: str) -> dict:
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        tags_commits = {}
+        for tag in self.gerrit.projects.get(repo).tags.list(limit=0):
+            # Trick when where is no tag
+            if tag in ('[', ']'):
+                continue
+            tags_commits[tag['ref'].removeprefix('refs/tags/')] = tag['revision']
+        return tags_commits
+
+    def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        input_ = {
+            "description": description,
+            "submit_type": "INHERIT"
+        }
+        self.gerrit.projects.create(repo, input_)
 
 
 class GiteaClient(GitClient):
@@ -367,17 +456,26 @@ class GitLabClient(GitClient):
         self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
 
 
+def check_git_plaform(sys_env: bool, type: str, type_wanted: str, url: str):
+    if sys_env and ((type is not None and type_wanted.casefold() == type.casefold()) or type_wanted in url):
+        return True
+    return False
+
+
 class GitClientFactory:
     @staticmethod
-    def create_client(url, type: str, login_or_token: str = None, password: str = None, ssl_verify: bool = True, proxy: str = None) -> GitClient:
-        if BITBUCKET_AVAILABLE and ('bitbucket'.casefold() == type.casefold() or 'bitbucket' in url):
+    def create_client(url, type: str = None, login_or_token: str = None, password: str = None,
+                      ssl_verify: bool = True, proxy: str = None) -> GitClient:
+        if check_git_plaform(BITBUCKET_AVAILABLE, type, 'bitbucket', url):
             return BitbucketClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITEA_AVAILABLE and ('gitea'.casefold() == type.casefold() or 'gitea' in url):
+        elif check_git_plaform(GERRIT_AVAILABLE, type, 'gerrit', url):
+            return GerritCodeReviewClient(url, login_or_token, password, ssl_verify, proxy)
+        elif check_git_plaform(GITEA_AVAILABLE, type, 'gitea', url):
             return GiteaClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITHUB_AVAILABLE and ('github'.casefold() == type.casefold() or 'github' in url):
+        elif check_git_plaform(GITHUB_AVAILABLE, type, 'github', url):
             return GitHubClient(url, login_or_token, password, ssl_verify, proxy)
-        elif GITLAB_AVAILABLE and ('gitlab'.casefold() == type.casefold() or 'gitlab' in url):
+        elif check_git_plaform(GITLAB_AVAILABLE, type, 'gitlab', url):
             return GitLabClient(url, login_or_token, password, ssl_verify, proxy)
         else:
             raise ValueError(
-                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')
+                f'Type "{type}" not supported or not detected from URL "{url}". Or python client dependency not installed - Bitbucket (atlassian-python-api): {BITBUCKET_AVAILABLE}, Gerrit (python-gerrit-api): {GERRIT_AVAILABLE}, Gitea (py-gitea): {GITEA_AVAILABLE}, GitLab (python-gitlab): {GITLAB_AVAILABLE}, GitHub (PyGithub): {GITHUB_AVAILABLE}.')

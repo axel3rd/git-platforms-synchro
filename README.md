@@ -4,13 +4,19 @@
 
 Synchronize branches of repositories from a Git platform to another (with rebase, merge unsupported).
 
-Supported platforms:
+**Principle**:
+- Check repositories to synchronise using API Git platform according includes/excludes pattern, create it/them on destination if not exist
+- Check branches according includes/excludes and retrieve last commit
+- For each branches if last commit different, clone repository from origin and push branches to destination (with tags)
+- If no branches synchronized, push tags if number differ between origin and destination
+- Write synchronization synthesis
+
+**Supported platforms**:
 - Bitbucket
+- Gerrit Code Review (with limitation)
 - Gitea
 - GitHub
 - GitLab
-
-**Experimental** status.
 
 ## Usage
 
@@ -22,7 +28,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[bitbucket|gitea|github|gitlab].txt`
+For more fined dependencies installed, you could use one or multiple pip install with: `modules/requirements-[bitbucket|gerrit|gitea|github|gitlab].txt`
 
 ### Execution program
 
@@ -53,7 +59,7 @@ options:
                         Git "from" password.
   --from-org FROM_ORG   Git "from" organization/user/project.
   --from-type FROM_TYPE
-                        Git "from" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
+                        Git "from" type (Bitbucket, Gerrit, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
   --from-proxy FROM_PROXY
                         Git "from" proxy (with credentials if needed).
   --from-disable-ssl-verify
@@ -63,7 +69,7 @@ options:
   --to-password TO_PASSWORD
                         Git "to" password.
   --to-org TO_ORG       Git "to" organization/user/project.
-  --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, GitLab, GitHub, ... ; To use when cannot be detected from URL).
+  --to-type TO_TYPE     Git "to" type (Bitbucket, Gitea, Gerrit, GitLab, GitHub, ... ; To use when cannot be detected from URL).
   --to-proxy TO_PROXY   Git "to" proxy (with credentials if needed).
   --to-disable-ssl-verify
                         Git "to" disable SSL verification.
@@ -81,6 +87,14 @@ options:
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 ```                        
+
+## Known issues
+
+On Gerrit, when a repository is created and mirrored with `git push --porcelain --mirror -- sync-to`, access permission error:
+
+```
+[remote rejected] (prohibited by Gerrit: project state does not permit write)
+```
 
 ## Development
 
@@ -135,4 +149,24 @@ services:
     ports:
       - '8000:8888/tcp'
     command: ANY
+```
+
+To instantiate a Gerrit accessible on `http://localhost:8080`, use this `compose.yaml` runnable via `docker compose up`:
+
+```
+services:
+  gerrit:
+    image: gerritcodereview/gerrit
+    volumes:
+       - git-volume:/var/gerrit/git
+       - index-volume:/var/gerrit/index
+       - cache-volume:/var/gerrit/cache
+    ports:
+       - "29418:29418"
+       - "8080:8080"
+
+volumes:
+  git-volume:
+  index-volume:
+  cache-volume:
 ```

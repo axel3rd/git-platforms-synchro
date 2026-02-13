@@ -6,8 +6,15 @@ from tests.test_utils import get_url_root, expect_request
 from requests import exceptions
 
 
+def test_type_undefined(caplog: LogCaptureFixture):
+    with raises(ValueError, match=re.escape('Type "None" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+        GitClientFactory.create_client('https://fake.url.dev')
+    with raises(ValueError, match=re.escape('Type "" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+        GitClientFactory.create_client('https://fake.url.dev', '')
+
+
 def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    with raises(NotImplementedError, match=re.escape("Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.")):
+    with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
         GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
 
 
@@ -318,3 +325,62 @@ def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     assert 0 == len(gitlab.get_branches('axel3rd', 'spring-petclinic'))
     assert 0 == len(gitlab.get_tags('axel3rd', 'spring-petclinic'))
+
+
+def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'foo', 'bar', proxy=get_url_root(httpserver))
+
+    with raises(exceptions.ProxyError):
+        gerrit.get_repos('')
+
+    assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
+
+
+def test_gerrit_connection_params():
+    gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'login', 'password')
+    assert 'login' == gerrit.get_login_or_token()
+    assert 'password' == gerrit.get_password()
+    assert 'https://fake.url.dev' == gerrit.get_url()
+
+
+def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gerrit', '/a/projects/', 'all=1&d=0')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/description')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/branches/', 'n=0&s=0')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo/tags/', 'n=0&s=0')
+    httpserver.expect_request('/a/projects/non-existing-repo').respond_with_data(status=404)
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
+
+    assert 104 == len(gerrit.get_repos(''))
+    assert gerrit.has_repo('', 'test-repo')
+    assert not gerrit.has_repo('', 'non-existing-repo')
+    assert get_url_root(httpserver) + '/test-repo.git' == gerrit.get_repo_clone_url('', 'test-repo')
+    assert 'Testing repo' == gerrit.get_repo_description('', 'test-repo')
+    assert 100 == len(gerrit.get_branches('', 'test-repo'))
+    assert 99 == len(gerrit.get_tags('', 'test-repo'))
+    assert '1fdc5f22d58eeb8ea2395f81d84854439141a848' == gerrit.get_tags('', 'test-repo')['tag-1']
+
+
+def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_data(status=404)
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='PUT').respond_with_data(status=201)
+    # On creation, Gerrit get project twice
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({'id': 'test-repo'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_json({'id': 'test-repo'})
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
+
+    gerrit.create_repo('', 'test-repo')
+
+
+def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1/branches/', 'n=0&s=0')
+    httpserver.expect_request('/a/projects/test-repo-1/tags/', query_string='n=0&s=0').respond_with_data('[]')
+
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
+
+    assert 0 == len(gerrit.get_branches('', 'test-repo-1'))
+    assert 0 == len(gerrit.get_tags('', 'test-repo-1'))
