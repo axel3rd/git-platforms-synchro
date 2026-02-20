@@ -4,7 +4,7 @@ import logging
 import modules.input_parser as input_parser
 from git import Repo
 from modules.git_clients import GitClientFactory, GitClient
-from modules.utils import TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory
+from modules.utils import TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory, test_git_ask_pass, get_git_ask_pass
 
 GIT_CONFIG_HTTP_PREFIX = 'http'
 GIT_REMOTE_TO = 'sync-to'
@@ -29,13 +29,15 @@ def set_git_credentials(username: str, password: str):
         os.environ.pop('GIT_PASSWORD', None)
         return
 
-    working_dir = os.path.dirname(os.path.realpath(__file__))
-
-    os.environ['GIT_ASKPASS'] = os.path.join(working_dir, 'modules', 'git_askpass.py')
+    os.environ['GIT_ASKPASS'] = get_git_ask_pass()
     if username:
         os.environ['GIT_USERNAME'] = username
+    else:
+        os.environ.pop('GIT_USERNAME', None)
     if password:
         os.environ['GIT_PASSWORD'] = password
+    else:
+        os.environ.pop('GIT_PASSWORD', None)
 
 
 def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, proxy: str = None) -> Repo:
@@ -49,7 +51,7 @@ def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, 
         else:
             delete_temporary_repo_git_directory()
     logging.debug('Cloning repo %s', url)
-    options = []
+    options = ['--config credential.helper=""']
     if disable_ssl_verify:
         options += ['--config http.sslVerify=false']
     if proxy:
@@ -146,9 +148,10 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
 
 
 def main() -> int:
-    delete_temporary_repo_git_directory()
     args = input_parser.parse()
+    delete_temporary_repo_git_directory()
     log_init(args.log_level)
+    test_git_ask_pass()
     logger.info('Starting Git Platforms Synchronization...')
     input_parser.print_args(args)
 
