@@ -24,7 +24,7 @@ def delete_temporary_repo_git_directory(force_if_test_mode: bool = False):
 def set_file_execution_permission(file: str):
     if not os.access(file, os.X_OK):
         permissions = os.stat(file).st_mode
-        os.chmod(file, permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        os.chmod(file, permissions | stat.S_IXUSR | stat.S_IXGRP)
 
 
 def get_git_ask_pass() -> str:
