@@ -77,6 +77,7 @@ def test_delete_temporary_repo_git_directory_permission_denied_windows(capsys):
                 mock_run.assert_called_once_with(['cmd', '/c', 'rmdir', '/s', '/q', 'tmp-git-repo'], shell=True)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='Specific Linux test')
 def test_set_file_execution_permission():
     with tempfile.NamedTemporaryFile(mode='w', delete=True) as temp_file:
         assert not os.access(temp_file.name, os.X_OK)

@@ -1,11 +1,14 @@
 import os
 import stat
 import shutil
+import logging
 import subprocess
 
 
 TMP_REPO_GIT_DIRECTORY = 'tmp-git-repo/'
 ENV_TEST_MODE = 'TEST_MODE'
+
+logger = logging.getLogger(__name__)
 
 
 def delete_temporary_repo_git_directory(force_if_test_mode: bool = False):
@@ -35,6 +38,9 @@ def get_git_ask_pass() -> str:
 
 
 def test_git_ask_pass() -> None:
+    if os.name != 'nt':
+        logger.warning('Windows is not supported for "git-askpass" process ; authentication will not work if not already in git credentials storage.')
+        return
     git_askpass = get_git_ask_pass()
     custom_env = os.environ.copy()
     custom_env['GIT_USERNAME'] = 'test42'
