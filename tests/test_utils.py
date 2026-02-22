@@ -1,10 +1,11 @@
 import os
 import json
 import tarfile
+import tempfile
 import pytest
 from unittest.mock import patch
 from git import Repo
-from modules.utils import ENV_TEST_MODE, TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory
+from modules.utils import ENV_TEST_MODE, TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory, set_file_execution_permission, test_git_ask_pass
 from pytest_httpserver import HTTPServer
 
 
@@ -74,3 +75,15 @@ def test_delete_temporary_repo_git_directory_permission_denied_windows(capsys):
             with patch('subprocess.run', return_value=mock_result) as mock_run:
                 delete_temporary_repo_git_directory(True)
                 mock_run.assert_called_once_with(['cmd', '/c', 'rmdir', '/s', '/q', 'tmp-git-repo'], shell=True)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Specific Linux test')
+def test_set_file_execution_permission():
+    with tempfile.NamedTemporaryFile(mode='w', delete=True) as temp_file:
+        assert not os.access(temp_file.name, os.X_OK)
+        set_file_execution_permission(temp_file.name)
+        assert os.access(temp_file.name, os.X_OK)
+
+
+def test_test_git_ask_pass():
+    test_git_ask_pass()
