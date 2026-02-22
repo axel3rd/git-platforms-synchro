@@ -5,7 +5,7 @@ import tempfile
 import pytest
 from unittest.mock import patch
 from git import Repo
-from modules.utils import ENV_TEST_MODE, TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory, set_file_execution_permission
+from modules.utils import ENV_TEST_MODE, TMP_REPO_GIT_DIRECTORY, delete_temporary_repo_git_directory, set_file_execution_permission, test_git_ask_pass
 from pytest_httpserver import HTTPServer
 
 
@@ -83,3 +83,7 @@ def test_set_file_execution_permission():
         assert not os.access(temp_file.name, os.X_OK)
         set_file_execution_permission(temp_file.name)
         assert os.access(temp_file.name, os.X_OK)
+
+
+def test_test_git_ask_pass():
+    test_git_ask_pass()

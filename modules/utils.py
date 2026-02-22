@@ -31,19 +31,20 @@ def set_file_execution_permission(file: str):
 
 
 def get_git_ask_pass() -> str:
+    os_windows = os.name == 'nt'
     working_dir = os.path.dirname(os.path.realpath(__file__))
-    git_askpass = os.path.join(working_dir, 'git_askpass.py')
-    set_file_execution_permission(git_askpass)
+    git_askpass = os.path.join(working_dir, 'git_askpass.' + ('bat' if os_windows else 'py'))
+    if not os_windows:
+        set_file_execution_permission(git_askpass)
     return git_askpass
 
 
 def test_git_ask_pass() -> None:
-    if os.name == 'nt':
-        logger.warning('Windows is not supported for "git-askpass" process ; authentication will not work if not already in git credentials storage.')
-        return
     git_askpass = get_git_ask_pass()
     custom_env = os.environ.copy()
     custom_env['GIT_USERNAME'] = 'test42'
-    result = subprocess.run([git_askpass, 'Username'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=custom_env)
-    if result.returncode != 0 or not result.stdout.startswith('test42'):
-        raise ValueError('PROBLEM: The ' + git_askpass + ' cannot be executed, please verify Dos/Unix encoding')
+    custom_env['GIT_PASSWORD'] = '42test'  # noqa: S2068
+    result_user = subprocess.run([git_askpass, 'Username'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=custom_env)
+    result_pwd = subprocess.run([git_askpass, 'Password'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=custom_env)
+    if result_user.returncode != 0 or result_user.stdout != 'test42\n' or result_pwd.returncode != 0 or result_pwd.stdout != '42test\n':
+        raise ValueError('PROBLEM: The ' + git_askpass + ' cannot be executed, please verify Dos/Unix encoding and/or permissions.')
