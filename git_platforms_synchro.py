@@ -93,7 +93,7 @@ def repo_tags_sync(args, clone_url_from: str, git_from: GitClient, git_to: GitCl
 
     tags_commits_from = git_from.get_tags(args.from_org, repo)
     tags_commits_to = git_to.get_tags(args.to_org, repo)
-    if branches_updated > 0 or len(tags_commits_from) == len(tags_commits_to):
+    if branches_updated > 0 or set(tags_commits_from.keys()).issubset(set(tags_commits_to.keys())):
         return False
 
     logger.info('  All branches already synchronized, do tags only...')
@@ -212,7 +212,7 @@ def main() -> int:
         branches_scanned, branches_updated = repo_branches_sync(args, branches_commits_from, branches_commits_to, clone_url_from, repo, git_to)
         total_branches_scanned += branches_scanned
 
-        # Sync tags if no branches updated and needed (nbr tags diff between "from" and "to")
+        # Sync tags if no branches updated and needed (tags different between "from" and "to")
         tag_updated = repo_tags_sync(args, clone_url_from, git_from, git_to, repo, branches_updated)
 
         # Items updated calculation
