@@ -5,7 +5,7 @@ from git import GitCommandError
 from unittest.mock import patch
 from pytest_httpserver import HTTPServer
 from pytest import LogCaptureFixture, raises
-from tests.test_utils import get_url_root, expect_request, mock_cloned_repo
+from tests.test_utils import get_url_root, expect_request, mock_cloned_repo, load_json
 
 
 def get_test_args_github_to_gitea(httpserver: HTTPServer):
@@ -327,3 +327,26 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     assert 'Synchronize branch...' not in caplog.text
     assert 'All branches already synchronized, do tags only...' not in caplog.text
     assert 'Git Platforms Synchronization finished sucessfully. Repos updated: 0/1. Branches updated: 0/2' in caplog.text
+
+
+def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver, prepare_tags=False)
+    httpserver.expect_request('/repos/spring-projects/spring-petclinic/tags').respond_with_json(
+        load_json('tests/http_mocks/github/repos/spring-projects/spring-petclinic/tags-changed.json'))
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver, prepare_tags=False)
+    httpserver.expect_request(
+        '/api/v1/repos/MyOrg/spring-petclinic/tags',
+        query_string='page=1').respond_with_json(load_json('tests/http_mocks/gitea/api/v1/repos/MyOrg/spring-petclinic/tags-changed.json'))
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
+
+    # Clone will be engaged for tags sync
+    with raises(GitCommandError):
+        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+            git_platforms_synchro.main()
+
+    assert 'Already synchronized.' in caplog.text
+    assert 'Synchronize branch...' not in caplog.text
+    assert 'All branches already synchronized, do tags only...' in caplog.text

@@ -13,9 +13,12 @@ def get_url_root(httpserver: HTTPServer) -> str:
     return httpserver.url_for('/').rstrip('/')
 
 
-def load_json(file: str, url_to_mock: str, url_replacement: str):
+def load_json(file: str, url_to_mock: str = None, url_replacement: str = None):
     with open(file) as f:
-        return json.loads(f.read().replace(url_to_mock, url_replacement))
+        content = f.read()
+        if url_to_mock and url_replacement:
+            content = content.replace(url_to_mock, url_replacement)
+        return json.loads(content)
 
 
 def mock_cloned_repo(httpserver: HTTPServer, bare: bool = False):
