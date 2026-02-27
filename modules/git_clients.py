@@ -440,14 +440,14 @@ class GitLabClient(GitClient):
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list():
+        for branch in self.gitlab.projects.get(str(org + '/' + repo)).branches.list(all=True):
             branches_commits[branch.name] = branch.commit['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list():
+        for tag in self.gitlab.projects.get(str(org + '/' + repo)).tags.list(all=True):
             tags_commits[tag.name] = tag.commit['id']
         return tags_commits
 
