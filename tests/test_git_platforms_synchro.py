@@ -277,8 +277,15 @@ def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptu
     # Gitea with same repo
     prepare_gitea_with_spring_projects(httpserver, update_commit=True)
 
+    # Remove 'from' credentials to validate pop process
+    test_args = get_test_args_github_to_gitea(httpserver)
+    test_args.remove('--from-login')
+    test_args.remove('foo')
+    test_args.remove('--from-password')
+    test_args.remove('bar')
+
     with raises(GitCommandError):
-        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+        with patch.object(sys, 'argv', test_args):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
