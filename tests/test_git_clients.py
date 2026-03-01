@@ -29,7 +29,7 @@ def test_check_inputs():
     with raises(ValueError, match='empty'):
         check_input('', 'empty')
     with raises(ValueError, match='empty'):
-        check_input(None, 'empty')
+        check_input(None, 'empty')  # noqa: python:S5655
 
 
 def test_type_undefined(caplog: LogCaptureFixture):

@@ -260,7 +260,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
     assert 'The requested URL returned error: 542' in caplog.text
 
 
-def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone
     # as already existing bare directory (reuse mechanism) and mock the git
     # push failure
@@ -286,7 +286,21 @@ def test_from_github_to_gitea_sync(httpserver: HTTPServer, caplog: LogCaptureFix
     assert 'The requested URL returned error: 542' in caplog.text
 
 
-def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver)
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver, update_commit=True)
+
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver) + ['--dry-run']):
+        git_platforms_synchro.main()
+
+    assert 'Synchronize branch...' in caplog.text
+    assert ' Dry-run mode, skipping branch synchronization.' in caplog.text
+
+
+def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone
     # as already existing bare directory (reuse mechanism) and mock the git
     # push failure
@@ -311,6 +325,20 @@ def test_from_github_to_gitea_tags_only(httpserver: HTTPServer, caplog: LogCaptu
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'All branches already synchronized, do tags only...' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
+
+
+def test_from_github_to_gitea_tags_only_dry_run(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver)
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver, prepare_tags=False)
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
+
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver) + ['--dry-run']):
+        git_platforms_synchro.main()
+
+    assert 'Dry-run mode, skipping tags synchronization.' in caplog.text
 
 
 def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
