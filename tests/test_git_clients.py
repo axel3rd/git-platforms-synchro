@@ -1,9 +1,35 @@
 import re
 from pytest_httpserver import HTTPServer
 from pytest import LogCaptureFixture, raises
-from modules.git_clients import GitClientFactory
+from modules.git_clients import GitClientFactory, GitClient, check_input, check_input_empty
 from tests.test_utils import get_url_root, expect_request
 from requests import exceptions
+from github import GithubException
+from gitlab import GitlabError
+
+
+def test_interface():
+    client = GitClient()
+    client.get_login_or_token()
+    client.get_password()
+    client.get_url()
+    client.get_repos('org')
+    client.has_repo('org', 'repo')
+    client.get_branches('org', 'repo')
+    client.get_tags('org', 'repo')
+    client.get_repo_description('org', 'repo')
+    client.get_repo_clone_url('org', 'repo')
+    client.create_repo('org', 'repo')
+    client.create_repo('org', 'repo', 'description')
+
+
+def test_check_inputs():
+    with raises(ValueError, match='not empty'):
+        check_input_empty('value', 'not empty')
+    with raises(ValueError, match='empty'):
+        check_input('', 'empty')
+    with raises(ValueError, match='empty'):
+        check_input(None, 'empty')  # noqa: python:S5655
 
 
 def test_type_undefined(caplog: LogCaptureFixture):
@@ -75,6 +101,21 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     assert 0 == len(github.get_branches('spring-projects', 'spring-petclinic'))
     assert 0 == len(github.get_tags('spring-projects', 'spring-petclinic'))
+
+
+def test_github_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    httpserver.expect_request('/repos/spring-projects/spring-petclinic').respond_with_data(status=442)
+    github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
+    with raises(GithubException, match='442'):
+        github.has_repo('spring-projects', 'spring-petclinic')
+
+
+def test_github_errors_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_request('/orgs/spring-projects').respond_with_data(status=442)
+    github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
+    with raises(GithubException, match='442'):
+        github.create_repo('spring-projects', 'spring-petclinic', 'fake')
 
 
 def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -259,6 +300,13 @@ def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptur
     assert 0 == len(bitbucket.get_tags('MyOrg', 'spring-ai-examples'))
 
 
+def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples-no-clone-url-http')
+    bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
+    with raises(ValueError, match='Cannot not found http clone link'):
+        bitbucket.get_repo_clone_url('MyOrg', 'spring-ai-examples-no-clone-url-http')
+
+
 def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'fake_token', proxy=get_url_root(httpserver))
 
@@ -325,6 +373,13 @@ def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     assert 0 == len(gitlab.get_branches('axel3rd', 'spring-petclinic'))
     assert 0 == len(gitlab.get_tags('axel3rd', 'spring-petclinic'))
+
+
+def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    httpserver.expect_request('/api/v4/projects/axel3rd/spring-petclinic').respond_with_data(status=442)
+    gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    with raises(GitlabError, match='442'):
+        gitlab.has_repo('axel3rd', 'spring-petclinic')
 
 
 def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
