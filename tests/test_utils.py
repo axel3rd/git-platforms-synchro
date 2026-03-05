@@ -27,7 +27,7 @@ def mock_cloned_repo(httpserver: HTTPServer, bare: bool = False):
     suffix = ''
     if bare:
         suffix = '.bare'
-    with tarfile.open('tests/resources/spring-petclinic.git' + suffix + '.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git' + suffix + '.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=TMP_REPO_GIT_DIRECTORY, filter='fully_trusted')
 
     # Replace remote origin URL to point to httpserver

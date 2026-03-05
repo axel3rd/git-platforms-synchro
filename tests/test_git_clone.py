@@ -10,7 +10,7 @@ from tests.test_utils import get_url_root
 
 def test_cloned_reuse(caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
     git_platforms_synchro.git_clone('https://github.com/spring-projects/spring-petclinic.git')
 
@@ -38,7 +38,7 @@ def test_cloned_new(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_cloned_bad_from_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
     httpserver.expect_request(
         '/spring-projects-other/spring-petclinic.git/info/refs',
@@ -58,7 +58,7 @@ def test_cloned_bad_from_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_cloned_bad_from_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
 
     httpserver.expect_request(
@@ -79,7 +79,7 @@ def test_cloned_bad_from_repo(httpserver: HTTPServer, caplog: LogCaptureFixture)
 
 def test_mirror_reuse(caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
 
     git_platforms_synchro.git_clone(
@@ -106,7 +106,7 @@ def test_mirror_new(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_mirror_bad_from_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
 
     httpserver.expect_request(
@@ -127,7 +127,7 @@ def test_mirror_bad_from_org(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_mirror_bad_from_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     delete_temporary_repo_git_directory()
-    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:
+    with tarfile.open('tests/resources/spring-petclinic.git.bare.tgz', 'r:gz') as tar:  # NOSONAR : Just for test
         tar.extractall(path=git_platforms_synchro.TMP_REPO_GIT_DIRECTORY, filter='tar')
 
     httpserver.expect_request(
