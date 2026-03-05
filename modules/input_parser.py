@@ -15,7 +15,7 @@ def hide_url(url: str) -> str:
     if url is None:
         return ''
     # Simple regex to hide credentials in URL
-    return re.sub(r'//(.*?):*(.*?)@', lambda m: '//***@', url)
+    return re.sub(r'//(.*?):*(.*?)@', lambda m: '//***@', url)  # NOSONAR : It is just to hide an URL sensitive data
 
 
 def parse():

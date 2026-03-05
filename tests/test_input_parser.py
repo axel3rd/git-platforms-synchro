@@ -68,7 +68,7 @@ def test_parsing_bool():
 
 def test_display(caplog: LogCaptureFixture):
     testargs = ['prog', '--from-url', 'https://from.git.com', '--from-proxy', 'http://localhost:8000',
-                '--to-url', 'https://to.git.com', '--to-proxy', 'http://evil:live@localhost:8000', '--to-login', 'ghu_xxxxxxxxxxxxxxxxxxxxxxxxx', '--from-org', 'my-org', '--to-org', 'my-org', '--to-description-prefix', 'Synchro - ']
+                '--to-url', 'https://to.git.com', '--to-proxy', 'http://evil:live@localhost:8000', '--to-login', 'ghu_xxxxxxxxxxxxxxxxxxxxxxxxx', '--from-org', 'my-org', '--to-org', 'my-org', '--to-description-prefix', 'Synchro - ']  # NOSONAR : Testing values
     with patch.object(sys, 'argv', testargs):
         args = input_parser.parse()
     input_parser.print_args(args)
