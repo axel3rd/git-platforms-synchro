@@ -41,7 +41,7 @@ def set_git_credentials(username: str, password: str):
 
 
 def git_clone(url: str, mirror: bool = False, disable_ssl_verify: bool = False, proxy: str = None) -> Repo:
-    if os.path.exists(TMP_REPO_GIT_DIRECTORY):
+    if os.path.exists(TMP_REPO_GIT_DIRECTORY) and len(os.listdir(TMP_REPO_GIT_DIRECTORY)):
         repo_cloned = Repo(TMP_REPO_GIT_DIRECTORY)
         origin_url = repo_cloned.remote('origin').url
         if repo_cloned.bare == mirror and origin_url == url:
