@@ -289,8 +289,9 @@ def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptu
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
-    assert 'Synchronize branch...' in caplog.text
+    assert 'Synchronize branch (with tags)...' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
+    assert "['git', 'push', '--porcelain', '--tags', '--', 'sync-to', 'main:main'" in caplog.text
 
 
 def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -303,8 +304,8 @@ def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCa
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver) + ['--dry-run']):
         git_platforms_synchro.main()
 
-    assert 'Synchronize branch...' in caplog.text
-    assert ' Dry-run mode, skipping branch synchronization.' in caplog.text
+    assert 'Synchronize branch (with tags)...' in caplog.text
+    assert 'Dry-run mode, skipping branch synchronization.' in caplog.text
 
 
 def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -359,7 +360,7 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
         git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
-    assert 'Synchronize branch...' not in caplog.text
+    assert 'Synchronize branch' not in caplog.text
     assert 'All branches already synchronized, do tags only...' not in caplog.text
     assert 'Git Platforms Synchronization finished sucessfully. Repos updated: 0/1. Branches updated: 0/2' in caplog.text
 
@@ -383,5 +384,5 @@ def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: Log
             git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
-    assert 'Synchronize branch...' not in caplog.text
+    assert 'Synchronize branch' not in caplog.text
     assert 'All branches already synchronized, do tags only...' in caplog.text
