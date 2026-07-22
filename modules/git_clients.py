@@ -291,7 +291,7 @@ class GiteaClient(GitClient):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
         try:
-            if sys.version_info > (3, 12):
+            if sys.version_info >= (3, 13):
                 Organization.request(self.gitea, org).create_repo(repo_name=repo, description=description, auto_init=False)
             else:
                 Organization.request(self.gitea, org).create_repo(repoName=repo, description=description, autoInit=False)
