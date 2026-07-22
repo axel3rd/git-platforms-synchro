@@ -1,3 +1,4 @@
+import sys
 import re
 from abc import ABC
 try:
@@ -290,11 +291,12 @@ class GiteaClient(GitClient):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
         try:
-            Organization.request(self.gitea, org).create_repo(
-                repo_name=repo, description=description, auto_init=False)
+            if sys.version_info > (3, 12):
+                Organization.request(self.gitea, org).create_repo(repo_name=repo, description=description, auto_init=False)
+            else:
+                Organization.request(self.gitea, org).create_repo(repoName=repo, description=description, autoInit=False)
         except NotFoundException:
-            User.request(self.gitea, org).create_repo(
-                repoName=repo, description=description, autoInit=False)
+            User.request(self.gitea, org).create_repo(repoName=repo, description=description, autoInit=False)
 
 
 class GitHubClient(GitClient):
