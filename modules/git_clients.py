@@ -291,7 +291,7 @@ class GiteaClient(GitClient):
         check_inputs(org, repo)
         try:
             Organization.request(self.gitea, org).create_repo(
-                repoName=repo, description=description, autoInit=False)
+                repo_name=repo, description=description, auto_init=False)
         except NotFoundException:
             User.request(self.gitea, org).create_repo(
                 repoName=repo, description=description, autoInit=False)
