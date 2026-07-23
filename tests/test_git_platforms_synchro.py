@@ -48,10 +48,11 @@ def prepare_gitea_with_spring_projects(httpserver: HTTPServer, prepare_branches:
 
 
 def test_git_type_undefined(httpserver: HTTPServer):
+    url_root = get_url_root(httpserver)
     testargs = [
         'prog',
         '--from-url',
-        get_url_root(httpserver),
+        url_root,
         '--to-url',
         httpserver.url_for('/'),
         '--to-login',
@@ -63,19 +64,17 @@ def test_git_type_undefined(httpserver: HTTPServer):
         '--to-org',
         'new-org']
 
-    with raises(ValueError, match='Type "" not supported or not detected from URL "' + get_url_root(httpserver) + '".'):
-        with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', testargs):
+        with raises(ValueError, match='Type "" not supported or not detected from URL "' + url_root + '".'):
             git_platforms_synchro.main()
-            # Should have raised an error
-            assert False
 
 
 def test_from_github_proxy_not_implemented(httpserver: HTTPServer, caplog: LogCaptureFixture):
     testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-proxy', 'http://my-proxy:8080', '--from-login', 'ghu_foo1234567890abcdef',  # NOSONAR : Testing value
                 '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
 
-    with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
-        with patch.object(sys, 'argv', testargs):
+    with patch.object(sys, 'argv', testargs):
+        with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
             git_platforms_synchro.main()
 
 
@@ -222,8 +221,8 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
         method='GET').respond_with_data(
         status=542)
 
-    with raises(GitCommandError):
-        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+        with raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Repository does not exist on "to" plaform, create as mirror...' in caplog.text
@@ -252,9 +251,10 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
         method='GET').respond_with_data(
         status=542)
 
-    with raises(GitCommandError):
-        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+        with raises(GitCommandError):
             git_platforms_synchro.main()
+
     assert 'Repository has no branches on "to" platform, synchronize as mirror...' in caplog.text
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text
@@ -284,8 +284,8 @@ def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptu
     test_args.remove('--from-password')
     test_args.remove('bar')
 
-    with raises(GitCommandError):
-        with patch.object(sys, 'argv', test_args):
+    with patch.object(sys, 'argv', test_args):
+        with raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
@@ -326,8 +326,8 @@ def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: Log
     prepare_gitea_with_spring_projects(httpserver, prepare_tags=False)
     httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
-    with raises(GitCommandError):
-        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+        with raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
@@ -379,8 +379,8 @@ def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: Log
     httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags', query_string='page=2').respond_with_json([])
 
     # Clone will be engaged for tags sync
-    with raises(GitCommandError):
-        with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
+        with raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text

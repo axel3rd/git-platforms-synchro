@@ -4,31 +4,31 @@ from pytest import LogCaptureFixture
 
 
 def test_bad_input():
-    assert 1 == read_input_from_sys_env('')
-    assert 1 == read_input_from_sys_env('Bad')
+    assert read_input_from_sys_env('') == 1
+    assert read_input_from_sys_env('Bad') == 1
 
 
 def test_no_sys_env(capsys):
-    assert 0 == read_input_from_sys_env('Username')
-    assert 0 == read_input_from_sys_env('Password')
-    assert '\n\n' == capsys.readouterr().out
+    assert read_input_from_sys_env('Username') == 0
+    assert read_input_from_sys_env('Password') == 0
+    assert capsys.readouterr().out == '\n\n'
 
 
 def test_username(capsys):
     os.environ['GIT_USERNAME'] = 'foo'
-    assert 0 == read_input_from_sys_env('Username')
-    assert 'foo\n' == capsys.readouterr().out
+    assert read_input_from_sys_env('Username') == 0
+    assert capsys.readouterr().out == 'foo\n'
 
 
 def test_password(capsys):
     os.environ['GIT_PASSWORD'] = 'bar'  # noqa
-    assert 0 == read_input_from_sys_env('Password')
-    assert 'bar\n' == capsys.readouterr().out
+    assert read_input_from_sys_env('Password') == 0
+    assert capsys.readouterr().out == 'bar\n'
 
 
 def test_username_and_password(capsys):
     os.environ['GIT_USERNAME'] = 'foo'
     os.environ['GIT_PASSWORD'] = 'bar'  # noqa
-    assert 0 == read_input_from_sys_env('username')
-    assert 0 == read_input_from_sys_env('password')
-    assert 'foo\nbar\n' == capsys.readouterr().out
+    assert read_input_from_sys_env('username') == 0
+    assert read_input_from_sys_env('password') == 0
+    assert capsys.readouterr().out == 'foo\nbar\n'

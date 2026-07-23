@@ -97,8 +97,9 @@ def test_mirror_new(httpserver: HTTPServer, caplog: LogCaptureFixture):
         method='GET').respond_with_data(
         status=542)
 
+    url = get_url_root(httpserver)
     with raises(GitCommandError):
-        git_platforms_synchro.git_clone(get_url_root(httpserver) + '/spring-projects/spring-petclinic.git', mirror=True)
+        git_platforms_synchro.git_clone(url + '/spring-projects/spring-petclinic.git', mirror=True)
 
     assert '"GET /spring-projects/spring-petclinic.git/info/refs?service=git-upload-pack HTTP/1.1" 542 -' in caplog.text
     assert 'The requested URL returned error: 542' in caplog.text

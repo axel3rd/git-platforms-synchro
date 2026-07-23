@@ -223,10 +223,7 @@ class GerritCodeReviewClient(GitClient):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_input_empty(org, MSG_GERRIT_ORG)
         check_input(repo, MSG_EMPTY_REPO)
-        input_ = {
-            "description": description,
-            "submit_type": "INHERIT"
-        }
+        input_ = {"description": description, "submit_type": "INHERIT"}
         self.gerrit.projects.create(repo, input_)
 
 
@@ -273,8 +270,7 @@ class GiteaClient(GitClient):
         check_inputs(org, repo)
         branches_commits = {}
         # 'Repository.request(self.gitea, org, repo).get_branches()' currently does not support pagination
-        results = self.gitea.requests_get_paginated(
-            '/repos/%s/%s/branches' % (org, repo))
+        results = self.gitea.requests_get_paginated('/repos/%s/%s/branches' % (org, repo))
         for result in results:
             branches_commits[result['name']] = result['commit']['id']
         return branches_commits
@@ -282,8 +278,7 @@ class GiteaClient(GitClient):
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = self.gitea.requests_get_paginated(
-            '/repos/%s/%s/tags' % (org, repo))
+        results = self.gitea.requests_get_paginated('/repos/%s/%s/tags' % (org, repo))
         for result in results:
             tags_commits[result['name']] = result['id']
         return tags_commits
@@ -366,13 +361,11 @@ class GitHubClient(GitClient):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
         try:
-            self.github.get_organization(org).create_repo(
-                name=repo, description=description, auto_init=False)
+            self.github.get_organization(org).create_repo(name=repo, description=description, auto_init=False)
         except GithubException as e:
             if e.status == 404:
                 # Use github.get_user().create_repo() for that case (get_user(xxx) does not have create_repo())
-                self.github.get_user().create_repo(
-                    name=repo, description=description, auto_init=False)
+                self.github.get_user().create_repo(name=repo, description=description, auto_init=False)
             else:
                 raise e
 
