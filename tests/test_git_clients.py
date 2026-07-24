@@ -40,18 +40,19 @@ def test_type_undefined(caplog: LogCaptureFixture):
 
 
 def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    proxy = get_url_root(httpserver)
     with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
-        GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=get_url_root(httpserver))
+        GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=proxy)
 
 
 def test_github_connection_params():
     github = GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx')
-    assert 'ghu_xxxx' == github.get_login_or_token()
-    assert 'https://fake.url.dev' == github.get_url()
+    assert github.get_login_or_token() == 'ghu_xxxx'
+    assert github.get_url() == 'https://fake.url.dev'
     assert github.get_password() is None
     github = GitClientFactory.create_client('https://fake.url.dev', 'github', 'login', 'password')
-    assert 'login' == github.get_login_or_token()
-    assert 'password' == github.get_password()
+    assert github.get_login_or_token() == 'login'
+    assert github.get_password() == 'password'
 
 
 def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -64,14 +65,14 @@ def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
 
-    assert 30 == len(github.get_repos('spring-projects'))
+    assert len(github.get_repos('spring-projects')) == 30
     assert github.has_repo('spring-projects', 'spring-petclinic')
     assert not github.has_repo('spring-projects', 'non-existing-repo')
     assert get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' == github.get_repo_clone_url('spring-projects', 'spring-petclinic')
-    assert 'A sample Spring-based application' == github.get_repo_description('spring-projects', 'spring-petclinic')
-    assert 8 == len(github.get_branches('spring-projects', 'spring-petclinic'))
-    assert 1 == len(github.get_tags('spring-projects', 'spring-petclinic'))
-    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == github.get_tags('spring-projects', 'spring-petclinic')['1.5.x']
+    assert github.get_repo_description('spring-projects', 'spring-petclinic') == 'A sample Spring-based application'
+    assert len(github.get_branches('spring-projects', 'spring-petclinic')) == 8
+    assert len(github.get_tags('spring-projects', 'spring-petclinic')) == 1
+    assert github.get_tags('spring-projects', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
 def test_github_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -99,8 +100,8 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
     httpserver.expect_request('/repos/spring-projects/spring-petclinic/tags').respond_with_data('[]')
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
 
-    assert 0 == len(github.get_branches('spring-projects', 'spring-petclinic'))
-    assert 0 == len(github.get_tags('spring-projects', 'spring-petclinic'))
+    assert len(github.get_branches('spring-projects', 'spring-petclinic')) == 0
+    assert len(github.get_tags('spring-projects', 'spring-petclinic')) == 0
 
 
 def test_github_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -129,9 +130,9 @@ def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_gitea_connection_params():
     gitea = GitClientFactory.create_client('https://fake.url.dev', 'gitea', 'login', 'password')
-    assert 'login' == gitea.get_login_or_token()
-    assert 'password' == gitea.get_password()
-    assert 'https://fake.url.dev' == gitea.get_url()
+    assert gitea.get_login_or_token() == 'login'
+    assert gitea.get_password() == 'password'
+    assert gitea.get_url() == 'https://fake.url.dev'
 
 
 def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -147,14 +148,14 @@ def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
-    assert 2 == len(gitea.get_repos('MyOrg'))
+    assert len(gitea.get_repos('MyOrg')) == 2
     assert gitea.has_repo('MyOrg', 'spring-petclinic')
     assert not gitea.has_repo('MyOrg', 'non-existing-repo')
     assert get_url_root(httpserver) + '/MyOrg/spring-petclinic.git' == gitea.get_repo_clone_url('MyOrg', 'spring-petclinic')
-    assert 'A (copied) sample Spring-based application' == gitea.get_repo_description('MyOrg', 'spring-petclinic')
-    assert 8 == len(gitea.get_branches('MyOrg', 'spring-petclinic'))
-    assert 1 == len(gitea.get_tags('MyOrg', 'spring-petclinic'))
-    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gitea.get_tags('MyOrg', 'spring-petclinic')['1.5.x']
+    assert gitea.get_repo_description('MyOrg', 'spring-petclinic') == 'A (copied) sample Spring-based application'
+    assert len(gitea.get_branches('MyOrg', 'spring-petclinic')) == 8
+    assert len(gitea.get_tags('MyOrg', 'spring-petclinic')) == 1
+    assert gitea.get_tags('MyOrg', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
 def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -186,8 +187,8 @@ def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFix
 
     gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
-    assert 0 == len(gitea.get_branches('MyOrg', 'spring-ai-examples-empty'))
-    assert 0 == len(gitea.get_tags('MyOrg', 'spring-ai-examples-empty'))
+    assert len(gitea.get_branches('MyOrg', 'spring-ai-examples-empty')) == 0
+    assert len(gitea.get_tags('MyOrg', 'spring-ai-examples-empty')) == 0
 
 
 def test_gitea_pagination_repos(httpserver: HTTPServer):
@@ -199,7 +200,7 @@ def test_gitea_pagination_repos(httpserver: HTTPServer):
     gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
     repos = gitea.get_repos('MyOrgMany')
-    assert 62 == len(repos)
+    assert len(repos) == 62
     assert 'repo-0' in repos
     assert 'repo-1' in repos
     assert 'repo-42' in repos
@@ -220,14 +221,14 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
     gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
 
     branches = gitea.get_branches('MyOrg', 'many')
-    assert 65 == len(branches)
+    assert len(branches) == 65
     assert 'branch-1766187828' in branches
     assert 'branch-1766187943' in branches
     assert 'branch-1766188006' in branches
     assert 'branch-1766188063' in branches
 
     tags = gitea.get_tags('MyOrg', 'many')
-    assert 64 == len(tags)
+    assert len(tags) == 64
     assert 'v1.1766187743' in tags
     assert 'v1.1766187923' in tags
     assert 'v1.1766187939' in tags
@@ -249,9 +250,9 @@ def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_bitbucket_connection_params():
     bitbucket = GitClientFactory.create_client('https://fake.url.dev', 'bitbucket', 'login', 'password')
-    assert 'login' == bitbucket.get_login_or_token()
-    assert 'password' == bitbucket.get_password()
-    assert 'https://fake.url.dev' == bitbucket.get_url()
+    assert bitbucket.get_login_or_token() == 'login'
+    assert bitbucket.get_password() == 'password'
+    assert bitbucket.get_url() == 'https://fake.url.dev'
 
 
 def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -263,14 +264,14 @@ def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
 
-    assert 2 == len(bitbucket.get_repos('MyOrg'))
+    assert len(bitbucket.get_repos('MyOrg')) == 2
     assert bitbucket.has_repo('MyOrg', 'spring-petclinic')
     assert not bitbucket.has_repo('MyOrg', 'non-existing-repo')
     assert get_url_root(httpserver) + '/scm/myorg/spring-petclinic.git' == bitbucket.get_repo_clone_url('MyOrg', 'spring-petclinic')
-    assert 'A sample Spring-based application' == bitbucket.get_repo_description('MyOrg', 'spring-petclinic')
-    assert 8 == len(bitbucket.get_branches('MyOrg', 'spring-petclinic'))
-    assert 1 == len(bitbucket.get_tags('MyOrg', 'spring-petclinic'))
-    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == bitbucket.get_tags('MyOrg', 'spring-petclinic')['1.5.x']
+    assert bitbucket.get_repo_description('MyOrg', 'spring-petclinic') == 'A sample Spring-based application'
+    assert len(bitbucket.get_branches('MyOrg', 'spring-petclinic')) == 8
+    assert len(bitbucket.get_tags('MyOrg', 'spring-petclinic')) == 1
+    assert bitbucket.get_tags('MyOrg', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
 def test_bitbucket_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -296,8 +297,8 @@ def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptur
 
     bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
 
-    assert 0 == len(bitbucket.get_branches('MyOrg', 'spring-ai-examples'))
-    assert 0 == len(bitbucket.get_tags('MyOrg', 'spring-ai-examples'))
+    assert len(bitbucket.get_branches('MyOrg', 'spring-ai-examples')) == 0
+    assert len(bitbucket.get_tags('MyOrg', 'spring-ai-examples')) == 0
 
 
 def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -318,18 +319,18 @@ def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_gitlab_connection_params():
     gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'login', 'password')
-    assert 'login' == gitlab.get_login_or_token()
-    assert 'password' == gitlab.get_password()
-    assert 'https://fake.url.dev' == gitlab.get_url()
+    assert gitlab.get_login_or_token() == 'login'
+    assert gitlab.get_password() == 'password'
+    assert gitlab.get_url() == 'https://fake.url.dev'
 
     gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    assert 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' == gitlab.get_login_or_token()
+    assert gitlab.get_login_or_token() == 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
     assert gitlab.get_password() is None
 
     # ~Recall for 'private_token' deteaction from password in initialization
     gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'foo', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    assert 'foo' == gitlab.get_login_or_token()
-    assert 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' == gitlab.get_password()
+    assert gitlab.get_login_or_token() == 'foo'
+    assert gitlab.get_password() == 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 
 def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -342,14 +343,14 @@ def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
-    assert 2 == len(gitlab.get_repos('axel3rd'))
+    assert len(gitlab.get_repos('axel3rd')) == 2
     assert gitlab.has_repo('axel3rd', 'spring-petclinic')
     assert not gitlab.has_repo('axel3rd', 'non-existing-repo')
     assert get_url_root(httpserver) + '/axel3rd/spring-petclinic.git' == gitlab.get_repo_clone_url('axel3rd', 'spring-petclinic')
-    assert 'A sample Spring-based application' == gitlab.get_repo_description('axel3rd', 'spring-petclinic')
-    assert 8 == len(gitlab.get_branches('axel3rd', 'spring-petclinic'))
-    assert 1 == len(gitlab.get_tags('axel3rd', 'spring-petclinic'))
-    assert 'c36452a2c34443ae26b4ecbba4f149906af14717' == gitlab.get_tags('axel3rd', 'spring-petclinic')['1.5.x']
+    assert gitlab.get_repo_description('axel3rd', 'spring-petclinic') == 'A sample Spring-based application'
+    assert len(gitlab.get_branches('axel3rd', 'spring-petclinic')) == 8
+    assert len(gitlab.get_tags('axel3rd', 'spring-petclinic')) == 1
+    assert gitlab.get_tags('axel3rd', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
 def test_gitlab_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -371,8 +372,8 @@ def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
-    assert 0 == len(gitlab.get_branches('axel3rd', 'spring-petclinic'))
-    assert 0 == len(gitlab.get_tags('axel3rd', 'spring-petclinic'))
+    assert len(gitlab.get_branches('axel3rd', 'spring-petclinic')) == 0
+    assert len(gitlab.get_tags('axel3rd', 'spring-petclinic')) == 0
 
 
 def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -393,9 +394,9 @@ def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
 def test_gerrit_connection_params():
     gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'login', 'password')
-    assert 'login' == gerrit.get_login_or_token()
-    assert 'password' == gerrit.get_password()
-    assert 'https://fake.url.dev' == gerrit.get_url()
+    assert gerrit.get_login_or_token() == 'login'
+    assert gerrit.get_password() == 'password'
+    assert gerrit.get_url() == 'https://fake.url.dev'
 
 
 def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -408,14 +409,14 @@ def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
 
     gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 
-    assert 104 == len(gerrit.get_repos(''))
+    assert len(gerrit.get_repos('')) == 104
     assert gerrit.has_repo('', 'test-repo')
     assert not gerrit.has_repo('', 'non-existing-repo')
     assert get_url_root(httpserver) + '/test-repo.git' == gerrit.get_repo_clone_url('', 'test-repo')
-    assert 'Testing repo' == gerrit.get_repo_description('', 'test-repo')
-    assert 100 == len(gerrit.get_branches('', 'test-repo'))
-    assert 99 == len(gerrit.get_tags('', 'test-repo'))
-    assert '1fdc5f22d58eeb8ea2395f81d84854439141a848' == gerrit.get_tags('', 'test-repo')['tag-1']
+    assert gerrit.get_repo_description('', 'test-repo') == 'Testing repo'
+    assert len(gerrit.get_branches('', 'test-repo')) == 100
+    assert len(gerrit.get_tags('', 'test-repo')) == 99
+    assert gerrit.get_tags('', 'test-repo')['tag-1'] == '1fdc5f22d58eeb8ea2395f81d84854439141a848'
 
 
 def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -437,5 +438,5 @@ def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
 
-    assert 0 == len(gerrit.get_branches('', 'test-repo-1'))
-    assert 0 == len(gerrit.get_tags('', 'test-repo-1'))
+    assert len(gerrit.get_branches('', 'test-repo-1')) == 0
+    assert len(gerrit.get_tags('', 'test-repo-1')) == 0
