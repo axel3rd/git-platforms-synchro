@@ -42,6 +42,8 @@ def parse():
     parser.add_argument('--repos-exclude', help='Repositories names patterns to exclude (comma separated).', default='\\.')
     parser.add_argument('--branches-include', help='Branches names patterns to include (comma separated).', default='')
     parser.add_argument('--branches-exclude', help='Branches names patterns to exclude (comma separated).', default='\\.')
+    parser.add_argument('--branches-delete-after-sync',
+                        help='Branches names patterns to delete after synchronisation (comma separated).', default='\\.')
     parser.add_argument('-d', '--dry-run',
                         help='Dry-run : Just analyse which branches should be synchronized, without doning it really.', action='store_true')
     parser.add_argument('-l', '--log-level', help='Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)', default='INFO')
@@ -68,6 +70,7 @@ def print_args(args: argparse.Namespace):
     logger.info('Repositories exclude        : %s', args.repos_exclude)
     logger.info('Branches include            : %s', args.branches_include)
     logger.info('Branches exclude            : %s', args.branches_exclude)
+    logger.info('Branches delete after sync  : %s', args.branches_delete_after_sync)
     logger.info('Dry-run                     : %s', args.dry_run)
     logger.info('Log Level                   : %s', args.log_level)
 

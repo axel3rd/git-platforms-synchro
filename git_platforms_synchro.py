@@ -120,6 +120,13 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, login_from: str, passwo
     repo_from_cloned.remote(GIT_REMOTE_TO).push(refspec=branch + ':' + branch, tags=with_tags).raise_if_error()
 
 
+def repo_branch_delete(dry_run: bool):
+    if dry_run:
+        logger.info('        Dry-run mode, skipping branch synchronization.')
+        return
+    raise NotADirectoryError('Not Yet Implemented')
+
+
 def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: dict,
                        clone_url_from: str, repo: str, git_to: GitClient) -> tuple[int, int]:
     """
@@ -139,6 +146,7 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
         logger.info('        Commit To  : %s', commit_to)
         if commit_from == commit_to:
             logger.info('        Already synchronized.')
+            repo_branch_delete(args.dry_run)
             continue
         with_tags = False
         with_tags_str = ''
@@ -149,6 +157,7 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
         branches_updated += 1
         repo_branch_sync(args.dry_run, clone_url_from, args.from_login, args.from_password, args.from_proxy, args.from_disable_ssl_verify,
                          git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, branch, with_tags)
+        repo_branch_delete(args.dry_run)
     return branches_scanned, branches_updated
 
 

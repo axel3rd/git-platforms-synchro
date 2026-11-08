@@ -119,6 +119,10 @@ def test_github_errors_create_repo(httpserver: HTTPServer, caplog: LogCaptureFix
         github.create_repo('spring-projects', 'spring-petclinic', 'fake')
 
 
+def test_github_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
 def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gitea = GitClientFactory.create_client('https://fake.url.dev', 'gitea', 'foo', 'bar', proxy=get_url_root(httpserver))
 
@@ -239,6 +243,10 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
     assert 'v1.1766188064' in tags
 
 
+def test_gitea_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
 def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     bitbucket = GitClientFactory.create_client('https://fake.url.dev', 'bitbucket', 'fake_token', proxy=get_url_root(httpserver))
 
@@ -306,6 +314,10 @@ def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: LogCapture
     bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
     with raises(ValueError, match='Cannot not found http clone link'):
         bitbucket.get_repo_clone_url('MyOrg', 'spring-ai-examples-no-clone-url-http')
+
+
+def test_bitbucket_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
 
 
 def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -383,6 +395,10 @@ def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
         gitlab.has_repo('axel3rd', 'spring-petclinic')
 
 
+def test_gitlab_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
 def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'foo', 'bar', proxy=get_url_root(httpserver))
 
@@ -440,3 +456,7 @@ def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
 
     assert len(gerrit.get_branches('', 'test-repo-1')) == 0
     assert len(gerrit.get_tags('', 'test-repo-1')) == 0
+
+
+def test_gerrit_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
