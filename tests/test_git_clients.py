@@ -119,8 +119,21 @@ def test_github_errors_create_repo(httpserver: HTTPServer, caplog: LogCaptureFix
         github.create_repo('spring-projects', 'spring-petclinic', 'fake')
 
 
-def test_github_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+def test_github_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch')
+    github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
+    github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
+
+
+def test_github_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'github', '/users/spring-projects')
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
+    httpserver.expect_request('/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch').respond_with_data(status=404)
+    github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
+    with raises(GithubException, match='404'):
+        github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
 
 
 def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):

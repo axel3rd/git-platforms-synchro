@@ -390,7 +390,7 @@ class GitHubClient(GitClient):
     def delete_branch(self, org: str, repo: str, branch: str):
         check_inputs(org, repo)
         check_input(branch, MSG_EMPTY_BRANCH)
-        return self.github.get_user(org).get_repo(repo).get_git_ref('heads/' + branch).delete()
+        self.github.get_user(org).get_repo(repo).get_git_ref('heads/' + branch).delete()
 
 
 class GitLabClient(GitClient):
