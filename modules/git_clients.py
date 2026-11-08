@@ -291,9 +291,9 @@ class GiteaClient(GitClient):
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = self.gitea.requests_get_paginated('/repos/%s/%s/tags' % (org, repo))
+        results = Repository.request(self.gitea, org, repo).get_tags()
         for result in results:
-            tags_commits[result['name']] = result['id']
+            tags_commits[result.name] = result.id
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):

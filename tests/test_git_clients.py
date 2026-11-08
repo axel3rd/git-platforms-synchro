@@ -256,7 +256,11 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
     assert 'v1.1766188064' in tags
 
 
-def test_gitea_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
+def test_gitea_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
 
 
@@ -329,7 +333,11 @@ def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: LogCapture
         bitbucket.get_repo_clone_url('MyOrg', 'spring-ai-examples-no-clone-url-http')
 
 
-def test_bitbucket_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
+def test_bitbucket_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
 
 
@@ -408,8 +416,19 @@ def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
         gitlab.has_repo('axel3rd', 'spring-petclinic')
 
 
-def test_gitlab_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+def test_gitlab_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
+    httpserver.expect_request('/api/v4/projects/78242723/repository/branches/some-branch', method='DELETE').respond_with_data()
+    gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    gitlab.delete_branch('axel3rd', 'spring-petclinic', 'some-branch')
+
+
+def test_gitlab_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
+    httpserver.expect_request('/api/v4/projects/78242723/repository/branches/some-branch', method='DELETE').respond_with_data(status=404)
+    gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    with raises(GitlabError, match='404'):
+        gitlab.delete_branch('axel3rd', 'spring-petclinic', 'some-branch')
 
 
 def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -471,5 +490,9 @@ def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
     assert len(gerrit.get_tags('', 'test-repo-1')) == 0
 
 
-def test_gerrit_delete_branch(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    raise NotImplementedError('Not Yet Implemented')
+
+
+def test_gerrit_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
