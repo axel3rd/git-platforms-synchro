@@ -1,11 +1,12 @@
 import re
+import pytest
 from pytest_httpserver import HTTPServer
-from pytest import LogCaptureFixture, raises
 from modules.git_clients import GitClientFactory, GitClient, check_input, check_input_empty
 from tests.test_utils import get_url_root, expect_request
 from requests import exceptions
 from github import GithubException
 from gitlab import GitlabError
+from gitea.exceptions import GiteaApiException
 
 
 def test_interface():
@@ -24,24 +25,24 @@ def test_interface():
 
 
 def test_check_inputs():
-    with raises(ValueError, match='not empty'):
+    with pytest.raises(ValueError, match='not empty'):
         check_input_empty('value', 'not empty')
-    with raises(ValueError, match='empty'):
+    with pytest.raises(ValueError, match='empty'):
         check_input('', 'empty')
-    with raises(ValueError, match='empty'):
+    with pytest.raises(ValueError, match='empty'):
         check_input(None, 'empty')  # NOSONAR : Test wanted
 
 
-def test_type_undefined(caplog: LogCaptureFixture):
-    with raises(ValueError, match=re.escape('Type "None" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+def test_type_undefined(caplog: pytest.LogCaptureFixture):
+    with pytest.raises(ValueError, match=re.escape('Type "None" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
         GitClientFactory.create_client('https://fake.url.dev')
-    with raises(ValueError, match=re.escape('Type "" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
+    with pytest.raises(ValueError, match=re.escape('Type "" not supported or not detected from URL "https://fake.url.dev". Or python client dependency not installed - Bitbucket (atlassian-python-api): True, Gerrit (python-gerrit-api): True, Gitea (py-gitea): True, GitLab (python-gitlab): True, GitHub (PyGithub): True.')):
         GitClientFactory.create_client('https://fake.url.dev', '')
 
 
-def test_github_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     proxy = get_url_root(httpserver)
-    with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
+    with pytest.raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
         GitClientFactory.create_client('https://fake.url.dev', 'github', 'ghu_xxxx', proxy=proxy)
 
 
@@ -55,7 +56,7 @@ def test_github_connection_params():
     assert github.get_password() == 'password'
 
 
-def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_gets(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/users/spring-projects/repos')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
@@ -75,7 +76,7 @@ def test_github_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert github.get_tags('spring-projects', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
-def test_github_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_org_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/orgs/spring-projects')
     httpserver.expect_oneshot_request('/orgs/spring-projects/repos', method='POST').respond_with_data(status=201)
 
@@ -84,7 +85,7 @@ def test_github_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
     github.create_repo('spring-projects', 'new-repo')
 
 
-def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_user_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_request('/orgs/spring-projects').respond_with_data(status=404)
     httpserver.expect_oneshot_request('/user/repos', method='POST').respond_with_data(status=201)
 
@@ -93,7 +94,7 @@ def test_github_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtu
     github.create_repo('spring-projects', 'new-repo')
 
 
-def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
     httpserver.expect_request('/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
@@ -104,22 +105,22 @@ def test_github_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
     assert len(github.get_tags('spring-projects', 'spring-petclinic')) == 0
 
 
-def test_github_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_errors_has_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     httpserver.expect_request('/repos/spring-projects/spring-petclinic').respond_with_data(status=442)
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
-    with raises(GithubException, match='442'):
+    with pytest.raises(GithubException, match='442'):
         github.has_repo('spring-projects', 'spring-petclinic')
 
 
-def test_github_errors_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_errors_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_request('/orgs/spring-projects').respond_with_data(status=442)
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
-    with raises(GithubException, match='442'):
+    with pytest.raises(GithubException, match='442'):
         github.create_repo('spring-projects', 'spring-petclinic', 'fake')
 
 
-def test_github_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch')
@@ -127,19 +128,19 @@ def test_github_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFi
     github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
 
 
-def test_github_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_github_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
     httpserver.expect_request('/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch').respond_with_data(status=404)
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
-    with raises(GithubException, match='404'):
+    with pytest.raises(GithubException, match='404'):
         github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
 
 
-def test_gitea_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     gitea = GitClientFactory.create_client('https://fake.url.dev', 'gitea', 'foo', 'bar', proxy=get_url_root(httpserver))
 
-    with raises(exceptions.ProxyError):
+    with pytest.raises(exceptions.ProxyError):
         gitea.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
@@ -152,7 +153,7 @@ def test_gitea_connection_params():
     assert gitea.get_url() == 'https://fake.url.dev'
 
 
-def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_gets(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg/repos', query_string='page=1')
     httpserver.expect_request('/api/v1/users/MyOrg/repos', query_string='page=2').respond_with_json([])
@@ -175,7 +176,7 @@ def test_gitea_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert gitea.get_tags('MyOrg', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
-def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     httpserver.expect_request('/api/v1/orgs/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={
         'id': 42,
@@ -186,7 +187,7 @@ def test_gitea_org_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture
     gitea.create_repo('MyOrg', 'new-repo', 'A new repo')
 
 
-def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_request('/api/v1/orgs/MyOrg').respond_with_data(status=404)
     expect_request(httpserver, 'gitea', '/api/v1/users/MyOrg')
     httpserver.expect_request('/api/v1/user/repos', method='POST').respond_with_json(status=201, response_json={'id': 42, 'name': 'spring-petclinic'})
@@ -196,7 +197,7 @@ def test_gitea_user_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
     gitea.create_repo('MyOrg', 'new-repo', 'A new repo')
 
 
-def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitea_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitea', '/api/v1/orgs/MyOrg')
     expect_request(httpserver, 'gitea', '/api/v1/repos/MyOrg/spring-ai-examples-empty')
     httpserver.expect_request('/api/v1/repos/MyOrg/spring-ai-examples-empty/branches').respond_with_data('[]')
@@ -256,18 +257,23 @@ def test_gitea_pagination_branches_and_tags(httpserver: HTTPServer):
     assert 'v1.1766188064' in tags
 
 
-def test_gitea_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+def test_gitea_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/branches/some-branch', method='DELETE').respond_with_data()
+    gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
+    gitea.delete_branch('MyOrg', 'spring-petclinic', 'some-branch')
 
 
-def test_gitea_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+def test_gitea_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
+    httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/branches/some-branch', method='DELETE').respond_with_data(status=500)
+    gitea = GitClientFactory.create_client(get_url_root(httpserver), 'gitea', 'foo', 'bar')
+    with pytest.raises(GiteaApiException, match='500'):
+        gitea.delete_branch('MyOrg', 'spring-petclinic', 'some-branch')
 
 
-def test_bitbucket_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     bitbucket = GitClientFactory.create_client('https://fake.url.dev', 'bitbucket', 'fake_token', proxy=get_url_root(httpserver))
 
-    with raises(exceptions.ProxyError):
+    with pytest.raises(exceptions.ProxyError):
         bitbucket.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
@@ -280,7 +286,7 @@ def test_bitbucket_connection_params():
     assert bitbucket.get_url() == 'https://fake.url.dev'
 
 
-def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_gets(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-petclinic/branches')
@@ -299,7 +305,7 @@ def test_bitbucket_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert bitbucket.get_tags('MyOrg', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
-def test_bitbucket_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_oneshot_request('/rest/api/1.0/projects/MyOrg/repos', method='POST').respond_with_json(status=201, response_json={
         'id': 42,
         'slug': 'new-repo',
@@ -314,7 +320,7 @@ def test_bitbucket_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture
     bitbucket.create_repo('MyOrg', 'new-repo')
 
 
-def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples')
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples/branches')
@@ -326,25 +332,25 @@ def test_bitbucket_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptur
     assert len(bitbucket.get_tags('MyOrg', 'spring-ai-examples')) == 0
 
 
-def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'bitbucket', '/rest/api/1.0/projects/MyOrg/repos/spring-ai-examples-no-clone-url-http')
     bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
-    with raises(ValueError, match='Cannot not found http clone link'):
+    with pytest.raises(ValueError, match='Cannot not found http clone link'):
         bitbucket.get_repo_clone_url('MyOrg', 'spring-ai-examples-no-clone-url-http')
 
 
-def test_bitbucket_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
 
 
-def test_bitbucket_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_bitbucket_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
 
 
-def test_gitlab_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     gitlab = GitClientFactory.create_client('https://fake.url.dev', 'gitlab', 'fake_token', proxy=get_url_root(httpserver))
 
-    with raises(exceptions.ProxyError):
+    with pytest.raises(exceptions.ProxyError):
         gitlab.get_repos('Fake')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
@@ -366,7 +372,7 @@ def test_gitlab_connection_params():
     assert gitlab.get_password() == 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 
-def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_gets(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitlab', '/api/v4/users', 'username=axel3rd')
     expect_request(httpserver, 'gitlab', '/api/v4/users/42/projects', 'include_subgroups=True')
     expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
@@ -386,7 +392,7 @@ def test_gitlab_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert gitlab.get_tags('axel3rd', 'spring-petclinic')['1.5.x'] == 'c36452a2c34443ae26b4ecbba4f149906af14717'
 
 
-def test_gitlab_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_request('/api/v4/projects', method='POST').respond_with_json(status=201, response_json={
         'id': 42,
         'name': 'new-repo'})
@@ -396,7 +402,7 @@ def test_gitlab_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gitlab.create_repo('axel3rd', 'new-repo')
 
 
-def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitlab', '/api/v4/users', 'username=axel3rd')
     expect_request(httpserver, 'gitlab', '/api/v4/users/42/projects', 'include_subgroups=True')
     expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
@@ -409,32 +415,32 @@ def test_gitlab_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
     assert len(gitlab.get_tags('axel3rd', 'spring-petclinic')) == 0
 
 
-def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_errors_has_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_request('/api/v4/projects/axel3rd/spring-petclinic').respond_with_data(status=442)
     gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    with raises(GitlabError, match='442'):
+    with pytest.raises(GitlabError, match='442'):
         gitlab.has_repo('axel3rd', 'spring-petclinic')
 
 
-def test_gitlab_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
     httpserver.expect_request('/api/v4/projects/78242723/repository/branches/some-branch', method='DELETE').respond_with_data()
     gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     gitlab.delete_branch('axel3rd', 'spring-petclinic', 'some-branch')
 
 
-def test_gitlab_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gitlab_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gitlab', '/api/v4/projects/axel3rd/spring-petclinic')
     httpserver.expect_request('/api/v4/projects/78242723/repository/branches/some-branch', method='DELETE').respond_with_data(status=404)
     gitlab = GitClientFactory.create_client(get_url_root(httpserver), 'gitlab', 'glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    with raises(GitlabError, match='404'):
+    with pytest.raises(GitlabError, match='404'):
         gitlab.delete_branch('axel3rd', 'spring-petclinic', 'some-branch')
 
 
-def test_gerrit_proxy(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     gerrit = GitClientFactory.create_client('https://fake.url.dev', 'gerrit', 'foo', 'bar', proxy=get_url_root(httpserver))
 
-    with raises(exceptions.ProxyError):
+    with pytest.raises(exceptions.ProxyError):
         gerrit.get_repos('')
 
     assert 'CONNECT fake.url.dev:443 HTTP/1' in caplog.text
@@ -447,7 +453,7 @@ def test_gerrit_connection_params():
     assert gerrit.get_url() == 'https://fake.url.dev'
 
 
-def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_gets(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gerrit', '/a/projects/', 'all=1&d=0')
     expect_request(httpserver, 'gerrit', '/a/projects/test-repo')
     expect_request(httpserver, 'gerrit', '/a/projects/test-repo/description')
@@ -467,7 +473,7 @@ def test_gerrit_gets(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert gerrit.get_tags('', 'test-repo')['tag-1'] == '1fdc5f22d58eeb8ea2395f81d84854439141a848'
 
 
-def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_create_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     httpserver.expect_oneshot_request('/a/projects/test-repo', method='GET').respond_with_data(status=404)
     httpserver.expect_oneshot_request('/a/projects/test-repo', method='PUT').respond_with_data(status=201)
     # On creation, Gerrit get project twice
@@ -479,7 +485,7 @@ def test_gerrit_create_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
     gerrit.create_repo('', 'test-repo')
 
 
-def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1')
     expect_request(httpserver, 'gerrit', '/a/projects/test-repo-1/branches/', 'n=0&s=0')
     httpserver.expect_request('/a/projects/test-repo-1/tags/', query_string='n=0&s=0').respond_with_data('[]')
@@ -490,9 +496,9 @@ def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: LogCaptureFi
     assert len(gerrit.get_tags('', 'test-repo-1')) == 0
 
 
-def test_gerrit_delete_branch_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')
 
 
-def test_gerrit_delete_branch_not_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_gerrit_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     raise NotImplementedError('Not Yet Implemented')

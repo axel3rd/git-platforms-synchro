@@ -309,7 +309,7 @@ class GiteaClient(GitClient):
     def delete_branch(self, org: str, repo: str, branch: str):
         check_inputs(org, repo)
         check_input(branch, MSG_EMPTY_BRANCH)
-        raise NotImplementedError('Not Yet Implemented')
+        self.gitea.requests_delete(str(Repository.REPO_BRANCHES + '/%s') % (org, repo, branch))
 
 
 class GitHubClient(GitClient):
