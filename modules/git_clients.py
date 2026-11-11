@@ -236,7 +236,8 @@ class GerritCodeReviewClient(GitClient):
         self.gerrit.projects.create(repo, input_)
 
     def delete_branch(self, org: str, repo: str, branch: str):
-        check_inputs(org, repo)
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
         check_input(branch, MSG_EMPTY_BRANCH)
         self.gerrit.projects.get(repo).branches.delete(branch)
 

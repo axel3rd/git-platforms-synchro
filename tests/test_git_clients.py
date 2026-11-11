@@ -497,8 +497,21 @@ def test_gerrit_empty_branches_tags(httpserver: HTTPServer, caplog: pytest.LogCa
 
 
 def test_gerrit_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo')
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test').respond_with_json({'ref': 'refs/heads/test', 'revision': '0000000000'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test').respond_with_json({'ref': 'refs/heads/test', 'revision': '0000000000'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test', method='DELETE').respond_with_data(status=204)
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
+
+    gerrit.delete_branch('', 'test-repo', 'test')
 
 
 def test_gerrit_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+    expect_request(httpserver, 'gerrit', '/a/projects/test-repo')
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test').respond_with_json({'ref': 'refs/heads/test', 'revision': '0000000000'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test').respond_with_json({'ref': 'refs/heads/test', 'revision': '0000000000'})
+    httpserver.expect_oneshot_request('/a/projects/test-repo/branches/test', method='DELETE').respond_with_data(status=404)
+    gerrit = GitClientFactory.create_client(get_url_root(httpserver), 'gerrit', 'foo', 'bar')
+
+    with pytest.raises(exceptions.HTTPError, match='404'):
+        gerrit.delete_branch('', 'test-repo', 'test')
