@@ -122,7 +122,7 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, login_from: str, passwo
 
 def repo_branch_delete(dry_run: bool):
     if dry_run:
-        logger.info('        Dry-run mode, skipping branch synchronization.')
+        logger.info('        Dry-run mode, skipping branch deletion.')
         return
     raise NotADirectoryError('Not Yet Implemented')
 

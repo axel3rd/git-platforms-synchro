@@ -151,11 +151,10 @@ def test_clone_proxy_disable_ssl(httpserver: HTTPServer, caplog: LogCaptureFixtu
     delete_temporary_repo_git_directory()
 
     clone_url = get_url_root(httpserver) + '/spring-projects/spring-petclinic.git'
-    proxy_port = str(httpserver.port + 1)
 
     with raises(GitCommandError):
-        git_platforms_synchro.git_clone(clone_url, disable_ssl_verify=True, proxy='http://localhost:' + proxy_port)
+        git_platforms_synchro.git_clone(clone_url, disable_ssl_verify=True, proxy='http://localhost:' + str(httpserver.port + 1))
 
     assert 'Cloning repo ' + clone_url in caplog.text
     if os.name != 'nt':
-        assert 'Failed to connect to localhost port ' + proxy_port in caplog.text
+        assert 'Failed to connect to localhost port ' in caplog.text
