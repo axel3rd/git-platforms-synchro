@@ -1,7 +1,7 @@
 import sys
+import pytest
 import modules.input_parser as input_parser
 from unittest.mock import patch
-from pytest import LogCaptureFixture
 
 
 def test_parsing_required():
@@ -17,6 +17,8 @@ def test_parsing_required():
 
 def test_reduce_simple():
     assert input_parser.reduce([], '', '') == []
+    assert input_parser.reduce([], '') == []
+    assert input_parser.reduce(['a', 'b', 'c'], 'a,c') == ['a', 'c']
     assert input_parser.reduce(['a', 'b', 'c'], 'a,c', '\\.') == ['a', 'c']
     assert input_parser.reduce(['a', 'b', 'c'], '', 'b') == ['a', 'c']
     assert input_parser.reduce(['a', 'b', 'c'], 'a,c', 'b') == ['a', 'c']
@@ -25,12 +27,17 @@ def test_reduce_simple():
 def test_reduce_complex():
     repos = ['spring-data-commons', 'spring-data-jpa', 'spring-amqp', 'spring-batch', 'spring-data-gemfire', 'spring-framework', 'spring-retry', 'spring-amqp-samples', 'spring-data-redis', 'spring-integration', 'spring-integration-samples', 'spring-data-cassandra', 'spring-net', 'spring-data-neo4j', 'spring-data-mongodb',
              'spring-webflow', 'spring-security', 'spring-security-kerberos', 'spring-shell', 'spring-plugin', 'spring-data-rest', 'spring-data-envers', 'spring-hateoas', 'spring-webflow-samples', 'eclipse-integration-tcserver', 'spring-integration-extensions', 'spring-boot', 'spring-loaded', 'spring-data-build', 'spring-petclinic']
-    assert input_parser.reduce(
-        repos, 'eclipse-*', '\\.') == ['eclipse-integration-tcserver']
-    assert input_parser.reduce(
-        repos, 'spring-security*', 'spring-security-k*') == ['spring-security']
-    assert input_parser.reduce(
-        repos, 'spring-p.*,spring-integration.*', 'spring-plugin,spring-integration-.*') == ['spring-integration', 'spring-petclinic']
+    assert input_parser.reduce(repos, 'eclipse-*', '\\.') == ['eclipse-integration-tcserver']
+    assert input_parser.reduce(repos, 'spring-security*', 'spring-security-k*') == ['spring-security']
+    assert input_parser.reduce(repos, 'spring-p.*,spring-integration.*',
+                               'spring-plugin,spring-integration-.*') == ['spring-integration', 'spring-petclinic']
+
+
+def test_reduce_no_excludes():
+    assert input_parser.reduce(['feature/'], 'feature/*') == ['feature/']
+    assert input_parser.reduce(['feature/'], 'some-feature/*') == []
+    assert input_parser.reduce(['some/feature/'], 'feature/*') == []
+    assert input_parser.reduce(['feature/'], 'feature1/*,feat') == ['feature/']
 
 
 def test_reduce_args_regexp_repos_empty():
@@ -66,7 +73,7 @@ def test_parsing_bool():
     assert args.dry_run is True
 
 
-def test_display(caplog: LogCaptureFixture):
+def test_display(caplog: pytest.LogCaptureFixture):
     testargs = ['prog', '--from-url', 'https://from.git.com', '--from-proxy', 'http://localhost:8000',
                 '--to-url', 'https://to.git.com', '--to-proxy', 'http://evil:live@localhost:8000', '--to-login', 'ghu_xxxxxxxxxxxxxxxxxxxxxxxxx', '--from-org', 'my-org', '--to-org', 'my-org', '--to-description-prefix', 'Synchro - ']  # NOSONAR : Testing values
     with patch.object(sys, 'argv', testargs):

@@ -75,7 +75,7 @@ def print_args(args: argparse.Namespace):
     logger.info('Log Level                   : %s', args.log_level)
 
 
-def reduce(items: list, includes: str, excludes: str):
+def reduce(items: list, includes: str, excludes: str = '\\.'):
     includes_combined = "(" + ")|(".join(includes.split(',')) + ")"
     excludes_combined = "(" + ")|(".join(excludes.split(',')) + ")"
     new_items = []
