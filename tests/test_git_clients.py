@@ -339,12 +339,12 @@ def test_bitbucket_bad_clone_url_http(httpserver: HTTPServer, caplog: pytest.Log
         bitbucket.get_repo_clone_url('MyOrg', 'spring-ai-examples-no-clone-url-http')
 
 
-def test_bitbucket_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
-
-
-def test_bitbucket_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
-    raise NotImplementedError('Not Yet Implemented')
+def test_bitbucket_delete_branch(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
+    # In bitbucket, no difference between branch exist or not ... HTTP 204 in both case
+    httpserver.expect_oneshot_request('/rest/branch-utils/1.0/projects/MyOrg/repos/spring-ai-examples/branches',
+                                      method='DELETE', json={'name': 'test'}).respond_with_data(status=204)
+    bitbucket = GitClientFactory.create_client(get_url_root(httpserver), 'bitbucket', 'fake_token')
+    bitbucket.delete_branch('MyOrg', 'spring-ai-examples', 'test')
 
 
 def test_gitlab_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
