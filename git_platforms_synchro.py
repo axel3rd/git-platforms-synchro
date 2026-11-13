@@ -120,15 +120,18 @@ def repo_branch_sync(dry_run: bool, clone_url_from: str, login_from: str, passwo
     repo_from_cloned.remote(GIT_REMOTE_TO).push(refspec=branch + ':' + branch, tags=with_tags).raise_if_error()
 
 
-def repo_branch_delete(dry_run: bool):
+def repo_branch_delete(dry_run: bool, git: GitClient, org: str, repo: str, branch: str, branches_delete_after_sync: str):
+    if branches_delete_after_sync is None or branches_delete_after_sync == '' or len(input_parser.reduce([branch], branches_delete_after_sync)) == 0:
+        return
     if dry_run:
         logger.info('        Dry-run mode, skipping branch deletion.')
         return
-    raise NotADirectoryError('Not Yet Implemented')
+    logger.info('        Deleting branch...')
+    git.delete_branch(org, repo, branch)
 
 
 def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: dict,
-                       clone_url_from: str, repo: str, git_to: GitClient) -> tuple[int, int]:
+                       clone_url_from: str, repo: str, git_from: GitClient, git_to: GitClient) -> tuple[int, int]:
     """
     Main branches process sync
 
@@ -146,7 +149,7 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
         logger.info('        Commit To  : %s', commit_to)
         if commit_from == commit_to:
             logger.info('        Already synchronized.')
-            repo_branch_delete(args.dry_run)
+            repo_branch_delete(args.dry_run, git_from, args.from_org, repo, branch, args.branches_delete_after_sync)
             continue
         with_tags = False
         with_tags_str = ''
@@ -157,7 +160,7 @@ def repo_branches_sync(args, branches_commits_from: dict, branches_commits_to: d
         branches_updated += 1
         repo_branch_sync(args.dry_run, clone_url_from, args.from_login, args.from_password, args.from_proxy, args.from_disable_ssl_verify,
                          git_to, args.to_proxy, args.to_disable_ssl_verify, args.to_org, repo, branch, with_tags)
-        repo_branch_delete(args.dry_run)
+        repo_branch_delete(args.dry_run, git_from, args.from_org, repo, branch, args.branches_delete_after_sync)
     return branches_scanned, branches_updated
 
 
@@ -223,7 +226,8 @@ def main() -> int:
             continue
 
         # Sync branches
-        branches_scanned, branches_updated = repo_branches_sync(args, branches_commits_from, branches_commits_to, clone_url_from, repo, git_to)
+        branches_scanned, branches_updated = repo_branches_sync(
+            args, branches_commits_from, branches_commits_to, clone_url_from, repo, git_from, git_to)
         total_branches_scanned += branches_scanned
 
         # Sync tags if no branches updated and needed (tags different between "from" and "to")

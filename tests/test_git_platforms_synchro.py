@@ -306,6 +306,22 @@ def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCa
 
     assert 'Synchronize branch (with tags)...' in caplog.text
     assert 'Dry-run mode, skipping branch synchronization.' in caplog.text
+    assert 'Dry-run mode, skipping branch deletion.' not in caplog.text
+
+
+def test_from_github_to_gitea_sync_dry_run_with_branch_deletion(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver)
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver, update_commit=True)
+
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver) + ['--dry-run', '--branches-delete-after-sync', 'springboot*']):
+        git_platforms_synchro.main()
+
+    assert 'Synchronize branch (with tags)...' in caplog.text
+    assert 'Dry-run mode, skipping branch synchronization.' in caplog.text
+    assert 'Dry-run mode, skipping branch deletion.' in caplog.text
 
 
 def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
@@ -363,6 +379,24 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     assert 'Synchronize branch' not in caplog.text
     assert 'All branches already synchronized, do tags only...' not in caplog.text
     assert 'Git Platforms Synchronization finished sucessfully. Repos updated: 0/1. Branches updated: 0/2' in caplog.text
+
+
+def test_from_github_to_gitea_all_already_sync_woth_branch_deletion(httpserver: HTTPServer, caplog: LogCaptureFixture):
+    # GitHub with spring-projects
+    prepare_github_with_spring_projects(httpserver)
+
+    # GitHub branch deletion
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/git/ref/heads/springboot3')
+
+    # Gitea with same repo
+    prepare_gitea_with_spring_projects(httpserver)
+
+    with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver) + ['--branches-delete-after-sync', 'springboot*']):
+        git_platforms_synchro.main()
+
+    assert 'Already synchronized.' in caplog.text
+    assert 'Synchronize branch' not in caplog.text
+    assert 'Deleting branch...' in caplog.text
 
 
 def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):

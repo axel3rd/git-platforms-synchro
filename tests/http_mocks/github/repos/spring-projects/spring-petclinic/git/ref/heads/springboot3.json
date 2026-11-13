@@ -1,7 +1,7 @@
 {
-    "ref": "refs/heads/some-branch",
+    "ref": "refs/heads/springboot3",
     "node_id": "xxxxxxxxxxxxxxxxxxxxxxxx",
-    "url": "https://api.github.com/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch",
+    "url": "https://api.github.com/repos/spring-projects/spring-petclinic/git/ref/heads/springboot3",
     "object": {
         "sha": "1234567890987654321234567890987654321234",
         "type": "commit",

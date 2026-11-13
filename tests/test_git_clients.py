@@ -123,18 +123,18 @@ def test_github_errors_create_repo(httpserver: HTTPServer, caplog: pytest.LogCap
 def test_github_delete_branch_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
-    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch')
+    expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic/git/ref/heads/springboot3')
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
-    github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
+    github.delete_branch('spring-projects', 'spring-petclinic', 'springboot3')
 
 
 def test_github_delete_branch_not_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     expect_request(httpserver, 'github', '/users/spring-projects')
     expect_request(httpserver, 'github', '/repos/spring-projects/spring-petclinic')
-    httpserver.expect_request('/repos/spring-projects/spring-petclinic/git/ref/heads/some-branch').respond_with_data(status=404)
+    httpserver.expect_request('/repos/spring-projects/spring-petclinic/git/ref/heads/springboot3').respond_with_data(status=404)
     github = GitClientFactory.create_client(get_url_root(httpserver), 'github', 'ghu_xxxx')
     with pytest.raises(GithubException, match='404'):
-        github.delete_branch('spring-projects', 'spring-petclinic', 'some-branch')
+        github.delete_branch('spring-projects', 'spring-petclinic', 'springboot3')
 
 
 def test_gitea_proxy(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
