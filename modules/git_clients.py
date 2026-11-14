@@ -32,6 +32,7 @@ except ImportError:
 
 MSG_EMPTY_ORG = 'Organization name cannot be empty.'
 MSG_EMPTY_REPO = 'Repository name cannot be empty.'
+MSG_EMPTY_BRANCH = 'Branch name cannot be empty.'
 MSG_GERRIT_ORG = 'Gerrit organization name should be empty.'
 MSG_CREATE_REPO_DESCRIPTION = 'TODO - Provide a description for this repository.'
 
@@ -93,6 +94,10 @@ class GitClient(ABC):
         # Should create a repository in the platform
         pass
 
+    def delete_branch(self, org: str, repo: str, branch: str):
+        # Should delete the repository branch the platform
+        pass
+
 
 class BitbucketClient(GitClient):
 
@@ -152,6 +157,11 @@ class BitbucketClient(GitClient):
         self.bitbucket.create_repo(org, repo)
         self.bitbucket.update_repo(org, repo, description=description)
 
+    def delete_branch(self, org: str, repo: str, branch: str):
+        check_inputs(org, repo)
+        check_input(branch, MSG_EMPTY_BRANCH)
+        self.bitbucket.delete_branch(org, repo, branch)
+
 
 class GerritCodeReviewClient(GitClient):
 
@@ -177,8 +187,7 @@ class GerritCodeReviewClient(GitClient):
     def get_repos(self, org: str) -> list:
         check_input_empty(org, MSG_GERRIT_ORG)
         repos = []
-        for repo in self.gerrit.projects.list(is_all=True):
-            repos.append(repo)
+        repos.extend(self.gerrit.projects.list(is_all=True))
         return repos
 
     def has_repo(self, org: str, repo: str) -> bool:
@@ -226,6 +235,12 @@ class GerritCodeReviewClient(GitClient):
         input_ = {"description": description, "submit_type": "INHERIT"}
         self.gerrit.projects.create(repo, input_)
 
+    def delete_branch(self, org: str, repo: str, branch: str):
+        check_input_empty(org, MSG_GERRIT_ORG)
+        check_input(repo, MSG_EMPTY_REPO)
+        check_input(branch, MSG_EMPTY_BRANCH)
+        self.gerrit.projects.get(repo).branches.delete(branch)
+
 
 class GiteaClient(GitClient):
 
@@ -269,18 +284,27 @@ class GiteaClient(GitClient):
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        # 'Repository.request(self.gitea, org, repo).get_branches()' currently does not support pagination
-        results = self.gitea.requests_get_paginated('/repos/%s/%s/branches' % (org, repo))
-        for result in results:
-            branches_commits[result['name']] = result['commit']['id']
+        if sys.version_info >= (3, 13):
+            results = Repository.request(self.gitea, org, repo).get_branches()
+            for result in results:
+                branches_commits[result.name] = result.commit['id']
+        else:
+            results = self.gitea.requests_get_paginated('/repos/%s/%s/branches' % (org, repo))
+            for result in results:
+                branches_commits[result['name']] = result['commit']['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = self.gitea.requests_get_paginated('/repos/%s/%s/tags' % (org, repo))
-        for result in results:
-            tags_commits[result['name']] = result['id']
+        if sys.version_info >= (3, 13):
+            results = Repository.request(self.gitea, org, repo).get_tags()
+            for result in results:
+                tags_commits[result.name] = result.id
+        else:
+            results = self.gitea.requests_get_paginated('/repos/%s/%s/tags' % (org, repo))
+            for result in results:
+                tags_commits[result['name']] = result['id']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
@@ -292,6 +316,11 @@ class GiteaClient(GitClient):
                 Organization.request(self.gitea, org).create_repo(repoName=repo, description=description, autoInit=False)
         except NotFoundException:
             User.request(self.gitea, org).create_repo(repoName=repo, description=description, autoInit=False)
+
+    def delete_branch(self, org: str, repo: str, branch: str):
+        check_inputs(org, repo)
+        check_input(branch, MSG_EMPTY_BRANCH)
+        self.gitea.requests_delete(str(Repository.REPO_BRANCHES + '/%s') % (org, repo, branch))
 
 
 class GitHubClient(GitClient):
@@ -368,6 +397,11 @@ class GitHubClient(GitClient):
                 self.github.get_user().create_repo(name=repo, description=description, auto_init=False)
             else:
                 raise e
+
+    def delete_branch(self, org: str, repo: str, branch: str):
+        check_inputs(org, repo)
+        check_input(branch, MSG_EMPTY_BRANCH)
+        self.github.get_user(org).get_repo(repo).get_git_ref('heads/' + branch).delete()
 
 
 class GitLabClient(GitClient):
@@ -449,6 +483,11 @@ class GitLabClient(GitClient):
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
         check_inputs(org, repo)
         self.gitlab.projects.create({'name': repo, 'description': description, 'visibility': 'private'})
+
+    def delete_branch(self, org: str, repo: str, branch: str):
+        check_inputs(org, repo)
+        check_input(branch, MSG_EMPTY_BRANCH)
+        self.gitlab.projects.get(str(org + '/' + repo)).branches.delete(branch)
 
 
 def check_git_plaform(sys_env: bool, type: str, type_wanted: str, url: str):

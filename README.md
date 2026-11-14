@@ -44,9 +44,9 @@ python3 git_platforms_synchro.py \
 
 ```
 usage: git_platforms_synchro.py [-h] --from-url FROM_URL [--from-login FROM_LOGIN] [--from-password FROM_PASSWORD] --from-org FROM_ORG [--from-type FROM_TYPE] [--from-proxy FROM_PROXY]
-                                [--from-disable-ssl-verify] --to-url TO_URL --to-login TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY]
-                                [--to-disable-ssl-verify] [--to-description-prefix TO_DESCRIPTION_PREFIX] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE]
-                                [--branches-include BRANCHES_INCLUDE] [--branches-exclude BRANCHES_EXCLUDE] [-d] [-l LOG_LEVEL]
+                                [--from-disable-ssl-verify] --to-url TO_URL --to-login TO_LOGIN [--to-password TO_PASSWORD] --to-org TO_ORG [--to-type TO_TYPE] [--to-proxy TO_PROXY] [--to-disable-ssl-verify]
+                                [--to-description-prefix TO_DESCRIPTION_PREFIX] [--repos-include REPOS_INCLUDE] [--repos-exclude REPOS_EXCLUDE] [--branches-include BRANCHES_INCLUDE]
+                                [--branches-exclude BRANCHES_EXCLUDE] [--branches-delete-after-sync BRANCHES_DELETE_AFTER_SYNC] [-d] [-l LOG_LEVEL]
 
 Git Platforms Synchronization
 
@@ -83,8 +83,10 @@ options:
                         Branches names patterns to include (comma separated).
   --branches-exclude BRANCHES_EXCLUDE
                         Branches names patterns to exclude (comma separated).
+  --branches-delete-after-sync BRANCHES_DELETE_AFTER_SYNC
+                        Branches names patterns to delete after synchronisation (comma separated).
   -d, --dry-run         Dry-run : Just analyse which branches should be synchronized, without doning it really.
-  -l LOG_LEVEL, --log-level LOG_LEVEL
+  -l, --log-level LOG_LEVEL
                         Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 ```                        
 
