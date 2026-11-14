@@ -22,6 +22,7 @@ def test_interface():
     client.get_repo_clone_url('org', 'repo')
     client.create_repo('org', 'repo')
     client.create_repo('org', 'repo', 'description')
+    client.delete_branch('org', 'repo', 'branch')
 
 
 def test_check_inputs():

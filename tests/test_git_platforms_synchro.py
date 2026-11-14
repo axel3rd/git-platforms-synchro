@@ -1,10 +1,10 @@
 import re
 import sys
+import pytest
 import git_platforms_synchro
 from git import GitCommandError
 from unittest.mock import patch
 from pytest_httpserver import HTTPServer
-from pytest import LogCaptureFixture, raises
 from tests.test_utils import get_url_root, expect_request, mock_cloned_repo, load_json
 
 
@@ -65,20 +65,20 @@ def test_git_type_undefined(httpserver: HTTPServer):
         'new-org']
 
     with patch.object(sys, 'argv', testargs):
-        with raises(ValueError, match='Type "" not supported or not detected from URL "' + url_root + '".'):
+        with pytest.raises(ValueError, match='Type "" not supported or not detected from URL "' + url_root + '".'):
             git_platforms_synchro.main()
 
 
-def test_from_github_proxy_not_implemented(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_proxy_not_implemented(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     testargs = ['prog', '--dry-run', '--from-url', get_url_root(httpserver), '--from-type', 'GitHub', '--from-proxy', 'http://my-proxy:8080', '--from-login', 'ghu_foo1234567890abcdef',  # NOSONAR : Testing value
                 '--to-url', get_url_root(httpserver), '--to-type', 'GitHub', '--to-login', 'foo', '--to-password', 'bar', '--from-org', 'spring-projects', '--to-org', 'spring-projects', '--repos-include', 'spring-petclinic', '--branches-include', 'main,springboot3']
 
     with patch.object(sys, 'argv', testargs):
-        with raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
+        with pytest.raises(NotImplementedError, match=re.escape('Proxy not implemented yet for GitHubClient (PyGithub#2426). Please use HTTP_PROXY/HTTPS_PROXY/NO_PROXY environment variables.')):
             git_platforms_synchro.main()
 
 
-def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     testargs = [
@@ -111,7 +111,7 @@ def test_same_from_to_github_no_auth(httpserver: HTTPServer, caplog: LogCaptureF
     assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
-def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_same_from_to_github_token(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     testargs = [
@@ -146,7 +146,7 @@ def test_same_from_to_github_token(httpserver: HTTPServer, caplog: LogCaptureFix
     assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
-def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_same_from_to_gitea(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_gitea_with_spring_projects(httpserver)
 
     testargs = [
@@ -183,7 +183,7 @@ def test_same_from_to_gitea(httpserver: HTTPServer, caplog: LogCaptureFixture):
     assert 'All branches already synchronized, do tags only...' not in caplog.text
 
 
-def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_empty_repo(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver, prepare_branches=False)
     httpserver.expect_request('/repos/spring-projects/spring-petclinic/branches').respond_with_data('[]')
     prepare_gitea_with_spring_projects(httpserver)
@@ -194,7 +194,7 @@ def test_from_github_empty_repo(httpserver: HTTPServer, caplog: LogCaptureFixtur
     assert 'Repository has no branches on "from" platform, skipping.' in caplog.text
 
 
-def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with "Empty" org
@@ -222,7 +222,7 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
         status=542)
 
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
-        with raises(GitCommandError):
+        with pytest.raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Repository does not exist on "to" plaform, create as mirror...' in caplog.text
@@ -230,7 +230,7 @@ def test_from_github_to_gitea_mirror_create(httpserver: HTTPServer, caplog: LogC
     assert 'The requested URL returned error: 542' in caplog.text
 
 
-def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     prepare_github_with_spring_projects(httpserver)
 
     # Gitea with "Empty" org
@@ -252,7 +252,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
         status=542)
 
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
-        with raises(GitCommandError):
+        with pytest.raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Repository has no branches on "to" platform, synchronize as mirror...' in caplog.text
@@ -260,7 +260,7 @@ def test_from_github_to_gitea_mirror_exist(httpserver: HTTPServer, caplog: LogCa
     assert 'The requested URL returned error: 542' in caplog.text
 
 
-def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone
     # as already existing bare directory (reuse mechanism) and mock the git
     # push failure
@@ -285,7 +285,7 @@ def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptu
     test_args.remove('bar')
 
     with patch.object(sys, 'argv', test_args):
-        with raises(GitCommandError):
+        with pytest.raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
@@ -294,7 +294,7 @@ def test_from_github_to_gitea_sync_real(httpserver: HTTPServer, caplog: LogCaptu
     assert "['git', 'push', '--porcelain', '--tags', '--', 'sync-to', 'main:main'" in caplog.text
 
 
-def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
@@ -309,7 +309,7 @@ def test_from_github_to_gitea_sync_dry_run(httpserver: HTTPServer, caplog: LogCa
     assert 'Dry-run mode, skipping branch deletion.' not in caplog.text
 
 
-def test_from_github_to_gitea_sync_dry_run_with_branch_deletion(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_sync_dry_run_with_branch_deletion(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
@@ -324,7 +324,7 @@ def test_from_github_to_gitea_sync_dry_run_with_branch_deletion(httpserver: HTTP
     assert 'Dry-run mode, skipping branch deletion.' in caplog.text
 
 
-def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # httpserver doesn't support KeepAlive, so we need to mock the git clone
     # as already existing bare directory (reuse mechanism) and mock the git
     # push failure
@@ -343,7 +343,7 @@ def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: Log
     httpserver.expect_request('/api/v1/repos/MyOrg/spring-petclinic/tags').respond_with_data('[]')
 
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
-        with raises(GitCommandError):
+        with pytest.raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Reusing existing cloned repo ' + get_url_root(httpserver) + '/spring-projects/spring-petclinic.git' in caplog.text
@@ -351,7 +351,7 @@ def test_from_github_to_gitea_tags_only_real(httpserver: HTTPServer, caplog: Log
     assert 'The requested URL returned error: 542' in caplog.text
 
 
-def test_from_github_to_gitea_tags_only_dry_run(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_tags_only_dry_run(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
@@ -365,7 +365,7 @@ def test_from_github_to_gitea_tags_only_dry_run(httpserver: HTTPServer, caplog: 
     assert 'Dry-run mode, skipping tags synchronization.' in caplog.text
 
 
-def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
@@ -381,7 +381,7 @@ def test_from_github_to_gitea_all_already_sync(httpserver: HTTPServer, caplog: L
     assert 'Git Platforms Synchronization finished sucessfully. Repos updated: 0/1. Branches updated: 0/2' in caplog.text
 
 
-def test_from_github_to_gitea_all_already_sync_woth_branch_deletion(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_all_already_sync_woth_branch_deletion(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver)
 
@@ -399,7 +399,7 @@ def test_from_github_to_gitea_all_already_sync_woth_branch_deletion(httpserver: 
     assert 'Deleting branch...' in caplog.text
 
 
-def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: LogCaptureFixture):
+def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: pytest.LogCaptureFixture):
     # GitHub with spring-projects
     prepare_github_with_spring_projects(httpserver, prepare_tags=False)
     httpserver.expect_request('/repos/spring-projects/spring-petclinic/tags').respond_with_json(
@@ -414,7 +414,7 @@ def test_from_github_to_gitea_tags_diff_sync(httpserver: HTTPServer, caplog: Log
 
     # Clone will be engaged for tags sync
     with patch.object(sys, 'argv', get_test_args_github_to_gitea(httpserver)):
-        with raises(GitCommandError):
+        with pytest.raises(GitCommandError):
             git_platforms_synchro.main()
 
     assert 'Already synchronized.' in caplog.text
