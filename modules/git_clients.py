@@ -284,17 +284,27 @@ class GiteaClient(GitClient):
     def get_branches(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         branches_commits = {}
-        results = Repository.request(self.gitea, org, repo).get_branches()
-        for result in results:
-            branches_commits[result.name] = result.commit['id']
+        if sys.version_info >= (3, 13):
+            results = Repository.request(self.gitea, org, repo).get_branches()
+            for result in results:
+                branches_commits[result.name] = result.commit['id']
+        else:
+            results = self.gitea.requests_get_paginated('/repos/%s/%s/branches' % (org, repo))
+            for result in results:
+                branches_commits[result['name']] = result['commit']['id']
         return branches_commits
 
     def get_tags(self, org: str, repo: str) -> dict:
         check_inputs(org, repo)
         tags_commits = {}
-        results = Repository.request(self.gitea, org, repo).get_tags()
-        for result in results:
-            tags_commits[result.name] = result.id
+        if sys.version_info >= (3, 13):
+            results = Repository.request(self.gitea, org, repo).get_tags()
+            for result in results:
+                tags_commits[result.name] = result.id
+        else:
+            results = self.gitea.requests_get_paginated('/repos/%s/%s/tags' % (org, repo))
+            for result in results:
+                tags_commits[result['name']] = result['id']
         return tags_commits
 
     def create_repo(self, org: str, repo: str, description: str = MSG_CREATE_REPO_DESCRIPTION):
